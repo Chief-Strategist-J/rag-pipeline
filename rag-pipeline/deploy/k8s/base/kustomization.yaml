@@ -6,3 +6,6 @@ resources:
   - service.yaml
   - configmap.yaml
   - scaledobject.yaml
+  - ingress.yaml
+  - pdb.yaml
+  - hpa.yaml
