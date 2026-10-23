@@ -11,6 +11,8 @@ services:
     ports:
       - "${PORT:-8000}:8000"
     depends_on:
+      postgres:
+        condition: service_healthy
       kafka:
         condition: service_healthy
       qdrant:
@@ -28,6 +30,15 @@ services:
       - API_VERSION=${API_VERSION:-v1}
       - SERVICE_NAME=${SERVICE_NAME:-rag-pipeline}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - DATABASE_PORT=${DATABASE_PORT:-5432}
+      - DATABASE_NAME=${DATABASE_NAME:-rag_pipeline_db}
+      - DATABASE_USER=${DATABASE_USER:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres_secure_password}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres_secure_password@postgres:5432/rag_pipeline_db}
+      - DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE:-20}
+      - DATABASE_MAX_OVERFLOW=${DATABASE_MAX_OVERFLOW:-10}
+      - DATABASE_TIMEOUT_MS=${DATABASE_TIMEOUT_MS:-5000}
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
       - KAFKA_TOPIC_CHANGE_FEED=${KAFKA_TOPIC_CHANGE_FEED:-rag.cdc.change-feed.v1}
       - KAFKA_TOPIC_INGESTION=${KAFKA_TOPIC_INGESTION:-rag.ingestion.v1}
@@ -74,6 +85,28 @@ services:
         ipv4_address: 172.28.30.10
       segment-observability:
         ipv4_address: 172.28.40.10
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: rag-postgres-poly
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres_secure_password}
+      POSTGRES_DB: ${DATABASE_NAME:-rag_pipeline_db}
+    volumes:
+      - postgres_data_poly:/var/lib/postgresql/data
+      - ../../database/migrations/sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rag_pipeline_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      segment-data:
+        ipv4_address: 172.28.30.15
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -257,6 +290,8 @@ networks:
           gateway: 172.28.40.1
 
 volumes:
+  postgres_data_poly:
+    name: rag_postgres_data_poly
   zookeeper_data_poly:
     name: rag_zookeeper_data_poly
   zookeeper_log_poly:
