@@ -1,0 +1,11 @@
+topology:
+  clusterType: postgres-ha
+  replication:
+    mode: asynchronous
+    replicas: 2
+    syncReplicas: 1
+  failover:
+    automatic: true
+    quorumMembers: 3
+    healthCheckIntervalSeconds: 5
+    electionTimeoutSeconds: 15
