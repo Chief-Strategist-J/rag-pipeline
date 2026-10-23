@@ -55,4 +55,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8000/healthz || exit 1
 
-ENTRYPOINT ["python3", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "30"]
+ENTRYPOINT ["sh", "-c", "exec python3 -m uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000} --timeout-graceful-shutdown 30"]
