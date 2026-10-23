@@ -1,11 +1,9 @@
-"""
-Root Application Bootstrap and Health Delivery.
-"""
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict, Any
 from fastapi import FastAPI, status
 
 from src.infra.config.settings import settings
+from src.api.rest.v1.routers.authz_rewrite_router import router as authz_rewrite_router
 
 
 @asynccontextmanager
@@ -20,6 +18,8 @@ app = FastAPI(
     docs_url=f"/api/{settings.API_VERSION}/docs",
     openapi_url=f"/api/{settings.API_VERSION}/openapi.json",
 )
+
+app.include_router(authz_rewrite_router, prefix=f"/api/{settings.API_VERSION}")
 
 
 @app.get(

@@ -1,0 +1,14 @@
+name: authz-rewrite
+version: 1.0.0
+description: Boundary authorization verification and query contextual rewriting
+invariants:
+  - Caller permission scopes must be resolved and validated before search queries touch vector indices
+  - Unauthenticated or unauthorized scopes must be rejected at the boundary
+  - Conversation follow-ups must be rewritten into standalone contextual queries
+  - Pure first-turn queries must skip LLM rewriting to conserve latency budget
+ports:
+  inbound:
+    - AuthzRewriteServicePort
+  outbound:
+    - AuthzPermissionPort
+    - QueryRewriteLlmPort
