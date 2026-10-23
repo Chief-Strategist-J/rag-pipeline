@@ -1,0 +1,40 @@
+services:
+  rag-pipeline:
+    port: 8000
+    protocol: HTTP
+    healthPath: /healthz
+    readyPath: /readyz
+
+  qdrant:
+    host: qdrant
+    port: 6333
+    grpcPort: 6334
+    protocol: HTTP/gRPC
+
+  valkey:
+    host: valkey
+    port: 6379
+    protocol: RESP
+
+  kafka:
+    host: kafka
+    port: 9092
+    protocol: PLAINTEXT
+
+  vllm-service:
+    host: vllm-service
+    port: 8000
+    protocol: HTTP
+    healthPath: /health
+
+  tei-embed-service:
+    host: tei-embed-service
+    port: 8080
+    protocol: HTTP
+    healthPath: /health
+
+  tei-rerank-service:
+    host: tei-rerank-service
+    port: 8080
+    protocol: HTTP
+    healthPath: /health
