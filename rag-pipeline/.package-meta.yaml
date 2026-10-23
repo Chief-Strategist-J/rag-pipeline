@@ -1,0 +1,20 @@
+# Package Metadata
+package_name: rag-pipeline
+version: 0.1.0
+type: polyglot-backend
+runtime: python
+framework: fastapi
+features:
+  - change-feed
+  - parse
+  - chunk-dedup
+  - embed-enrich
+  - index
+  - authz-rewrite
+  - retrieve
+  - rerank
+  - generate
+  - output-guard
+  - security
+  - evals
+  - observability
