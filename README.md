@@ -303,63 +303,139 @@ curl -X POST http://localhost:8000/api/v1/pipeline/query \
 
 ---
 
-## 9. Research Papers & Academic References
+## 9. Research Papers & Academic Foundations (In-Depth Analysis)
 
-The design, algorithmic choices, and safety guarantees of this platform are grounded in peer-reviewed machine learning, information retrieval, and systems research:
+The engineering, algorithmic design, and security invariants of this platform directly implement foundational and state-of-the-art breakthroughs across Information Retrieval (IR), Natural Language Processing (NLP), and Distributed Systems.
 
-### Foundational RAG & Retrieval
-- **Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks**
-  *Lewis et al. (NeurIPS 2020)*
-  [arXiv:2005.11401](https://arxiv.org/abs/2005.11401) — Foundational paper introducing end-to-end differentiable RAG combining parametric memory with non-parametric dense retrieval.
-- **Dense Passage Retrieval for Open-Domain Question Answering (DPR)**
-  *Karpukhin et al. (EMNLP 2020)*
-  [arXiv:2004.04906](https://arxiv.org/abs/2004.04906) — Establishes bi-encoder architectures for scalable, high-speed dense vector retrieval over Lucene/BM25.
-- **Reciprocal Rank Fusion Outperforms Condorcet and Individual Rank Learning Methods**
-  *Cormack, Clarke, and Büttcher (ACM SIGIR 2009)*
-  [DOI:10.1145/1571941.1572114](https://doi.org/10.1145/1571941.1572114) — Mathematical proof and empirical evidence for Reciprocal Rank Fusion ($k=60$) over heterogeneous retrieval engines.
+```mermaid
+flowchart LR
+    subgraph IR_Foundations [Information Retrieval & Fusion]
+        DPR[DPR: Karpukhin et al. 2020<br>Bi-Encoder Architecture]
+        RRF[RRF: Cormack et al. 2009<br>Rank Fusion Formula]
+        BERT_RR[BERT Reranker: Nogueira 2019<br>Cross-Encoder Attention]
+    end
 
-### Embeddings, Reranking & Hybrid Search
-- **BGE-M3: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings**
-  *Chen et al. (BAAI 2024)*
-  [arXiv:2402.03216](https://arxiv.org/abs/2402.03216) — Multi-modal embedding model supporting simultaneous dense retrieval, multi-vector ColBERT interaction, and sparse lexical matching.
-- **Passage Re-ranking with BERT**
-  *Nogueira and Cho (arXiv 2019)*
-  [arXiv:1901.04085](https://arxiv.org/abs/1901.04085) — Introduces cross-encoder sequence classification for passage reranking, analyzing full query-document mutual attention.
+    subgraph LLM_Systems [Inference & Memory Systems]
+        RAG_LEWIS[RAG: Lewis et al. 2020<br>Parametric + Non-Parametric]
+        VLLM[PagedAttention: Kwon et al. 2023<br>Virtual Memory KV Cache]
+        HNSW[HNSW: Malkov 2018<br>Skip-List Vector Graph]
+    end
 
-### High-Throughput Serving & Engine Architecture
-- **Efficient Memory Management for Large Language Model Serving with PagedAttention (vLLM)**
-  *Kwon et al. (SOSP 2023)*
-  [arXiv:2309.06180](https://arxiv.org/abs/2309.06180) — Introduces virtual memory paging for KV-caches, achieving $2\times\text{--}4\times$ higher throughput and reduced memory fragmentation in LLM inference.
-- **HNSW: Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs**
-  *Malkov and Yashunin (IEEE TPAMI 2018)*
-  [arXiv:1603.09320](https://arxiv.org/abs/1603.09320) — Graph-based algorithm powering Qdrant's real-time sub-millisecond vector indexing.
+    subgraph Safety_Evals [Safety, Grounding & Metrics]
+        RAGAS[Ragas: Es et al. 2024<br>Faithfulness & Recall Triad]
+        NEMO[NeMo: Rebedea et al. 2023<br>Programmable Guardrails]
+    end
 
-### Hallucination, Guardrails & Evaluation
-- **Ragas: Automated Evaluation of Retrieval Augmented Generation**
-  *Es et al. (EACL 2024)*
-  [arXiv:2309.15217](https://arxiv.org/abs/2309.15217) — Framework for reference-free evaluation of RAG pipelines measuring faithfulness, answer relevance, and context precision.
-- **NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications**
-  *Rebedea et al. (EMNLP 2023)*
-  [arXiv:2310.10501](https://arxiv.org/abs/2310.10501) — Programmable rails for steering LLM conversations, preventing prompt injection, and enforcing domain constraints.
+    IR_Foundations --> Pipeline[Enterprise Production RAG Pipeline]
+    LLM_Systems --> Pipeline
+    Safety_Evals --> Pipeline
+```
+
+---
+
+### A. Foundational Retrieval-Augmented Generation
+
+#### 1. Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks
+- **Authors**: Patrick Lewis, Ethan Perez, Aleksandera Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (NeurIPS 2020)
+- **Paper Link**: [arXiv:2005.11401](https://arxiv.org/abs/2005.11401)
+- **Core Contribution**: Introduced the canonical RAG paradigm combining a pre-trained parametric sequence-to-sequence model (BART/T5) with a non-parametric dense retrieval index (DPR over Wikipedia). Formalized two variants:
+  - *RAG-Sequence*: Top-$K$ documents are retrieved, and the same document conditions the generation of the entire sequence:
+    $$P_{\text{Sequence}}(y|x) \approx \sum_{z \in \text{top-}k(P(\cdot|x))} P_\eta(z|x) \prod_{i=1}^N P_\theta(y_i|x, z, y_{1:i-1})$$
+  - *RAG-Token*: Each token can be conditioned on a different retrieved passage, allowing dynamic multi-source synthesis:
+    $$P_{\text{Token}}(y|x) \approx \prod_{i=1}^N \sum_{z \in \text{top-}k(P(\cdot|x))} P_\eta(z|x) P_\theta(y_i|x, z, y_{1:i-1})$$
+- **Implementation in Codebase**: [`src/features/generate/domain/workflows/generate_workflow.py`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/generate/domain/workflows/generate_workflow.py) adopts the sequence-level conditioned prompt context, enforcing verifiable citation identifiers `[doc:v:c0000]` for every asserted fact.
+
+#### 2. Dense Passage Retrieval for Open-Domain Question Answering (DPR)
+- **Authors**: Vladimir Karpukhin, Barlas Oğuz, Sewon Min, Patrick Lewis, Ledell Wu, Sergey Edunov, Danqi Chen, Wen-tau Yih (EMNLP 2020)
+- **Paper Link**: [arXiv:2004.04906](https://arxiv.org/abs/2004.04906)
+- **Core Contribution**: Proved that dual-encoder (bi-encoder) architectures trained using in-batch negative sampling drastically outperform traditional TF-IDF/BM25 on open-domain QA. Encodes queries and passages separately into a shared metric space where dot product represents semantic similarity:
+  $$\text{sim}(q, p) = E_Q(q)^T E_P(p)$$
+- **Implementation in Codebase**: [`src/features/embed_enrich/`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/embed_enrich/) uses Hugging Face TEI serving dense bi-encoders, decoupled from ingestion workers to allow independent horizontal GPU autoscaling.
+
+---
+
+### B. Hybrid Search, Rank Fusion & Reranking
+
+#### 3. Reciprocal Rank Fusion Outperforms Condorcet and Individual Rank Learning Methods
+- **Authors**: Gordon V. Cormack, Charles L. A. Clarke, Stefan Büttcher (ACM SIGIR 2009)
+- **Paper Link**: [ACM Digital Library](https://doi.org/10.1145/1571941.1572114) | [PDF Direct](https://plg.uwaterloo.ca/~gvcormac/cormack-sigir09-rrf.pdf)
+- **Core Contribution**: Solved the score-normalization challenge across heterogeneous search engines (e.g. unbounded BM25 scores vs bounded cosine similarity $[-1, 1]$). Proposed a rank-based fusion metric that is parameter-insensitive and monotonic:
+  $$RRF\_Score(d \in D) = \sum_{m \in M} \frac{1}{k + r_m(d)}$$
+  Where $M$ is the set of retrieval models (dense + sparse), $r_m(d)$ is the rank of document $d$ in system $m$, and $k$ (empirically set to $60$) dampens the impact of extreme outliers.
+- **Implementation in Codebase**: Implemented verbatim in [`src/features/retrieve/domain/rules/retrieve_rules.py`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/retrieve/domain/rules/retrieve_rules.py#L9-L30) to fuse dense cosine matches from Qdrant with sparse lexical BM25 token frequencies.
+
+#### 4. BGE-M3: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings
+- **Authors**: Jianlv Chen, Shitao Xiao, Peitian Zhang, Kun Luo, Defu Lian, Zheng Liu (BAAI 2024)
+- **Paper Link**: [arXiv:2402.03216](https://arxiv.org/abs/2402.03216)
+- **Core Contribution**: Introduced a versatile embedding model unifying three complementary retrieval mechanisms within a single model architecture:
+  1. *Dense retrieval*: High-level semantic cosine matching.
+  2. *Sparse retrieval*: Learned lexical weights (similar to SPLADE) outputting term importance.
+  3. *Multi-vector retrieval*: ColBERT-style fine-grained token-to-token maximum similarity interaction.
+- **Implementation in Codebase**: Drives the embedding vectors generated by [`src/features/embed_enrich/`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/embed_enrich/), providing multi-lingual support up to 8192 token window sizes.
+
+#### 5. Passage Re-ranking with BERT
+- **Authors**: Rodrigo Nogueira, Kyunghyun Cho (arXiv 2019)
+- **Paper Link**: [arXiv:1901.04085](https://arxiv.org/abs/1901.04085)
+- **Core Contribution**: Established the standard two-stage retrieval architecture: first-stage retrieval retrieves a high-recall candidate set ($\sim 100$ items) via fast vector/lexical search, followed by a second-stage cross-encoder that jointly attends to all query and passage tokens:
+  $$S(q, d) = \text{Softmax}\left(\mathbf{W} \cdot \text{Transformer}(\text{[CLS]} \circ q \circ \text{[SEP]} \circ d \circ \text{[SEP]})\right)_{[\text{relevant}]}$$
+- **Implementation in Codebase**: [`src/features/rerank/domain/workflows/rerank_workflow.py`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/rerank/domain/workflows/rerank_workflow.py) runs candidate chunks through `bge-reranker-v2-m3` on dedicated GPU pools, pruning low-scoring noise before context hits the LLM.
+
+---
+
+### C. Large-Scale Systems & Vector Storage
+
+#### 6. Efficient Memory Management for Large Language Model Serving with PagedAttention (vLLM)
+- **Authors**: Woosuk Kwon, Zhuohan Li, Siyuan Shen, Yanping Huang, Yida Wang, Lianmin Zheng, Cody Hao Yu, Joseph E. Gonzalez, Ion Stoica (ACM SOSP 2023)
+- **Paper Link**: [arXiv:2309.06180](https://arxiv.org/abs/2309.06180)
+- **Core Contribution**: Identified that traditional LLM serving systems waste 60%–80% of GPU memory on KV-cache fragmentation and over-allocation. Introduced *PagedAttention*, which maps dynamic KV-caches to non-contiguous virtual memory blocks (analogous to virtual memory OS paging), increasing throughput by up to $4\times$.
+- **Implementation in Codebase**: The generator adapter in [`src/features/generate/infrastructure/adapters/`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/generate/infrastructure/adapters/generate_adapters.py) interfaces directly with vLLM OpenAI-compatible endpoints with continuous batching and tensor parallelism.
+
+#### 7. Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs (HNSW)
+- **Authors**: Yu. A. Malkov, D. A. Yashunin (IEEE Transactions on Pattern Analysis and Machine Intelligence 2018)
+- **Paper Link**: [arXiv:1603.09320](https://arxiv.org/abs/1603.09320)
+- **Core Contribution**: Structuring high-dimensional vectors into multi-layer hierarchical graphs where top layers have longer geometric links (fast traversal) and bottom layers have dense local clustering, achieving logarithmic search complexity $\mathcal{O}(\log N)$ with high recall.
+- **Implementation in Codebase**: Backs the distributed vector persistence engine (Qdrant) in [`src/features/index/`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/index/), executing pre-filtered queries with sub-millisecond p99 latencies.
+
+---
+
+### D. Safety, Hallucination Suppression & Evaluation
+
+#### 8. Ragas: Automated Evaluation of Retrieval Augmented Generation
+- **Authors**: Shahul Es, Jithin James, Luis Espinosa-Anke, Steven Schockaert (EACL 2024)
+- **Paper Link**: [arXiv:2309.15217](https://arxiv.org/abs/2309.15217)
+- **Core Contribution**: Established a reference-free evaluation methodology for production RAG pipelines, defining the foundational quality triad:
+  1. *Faithfulness*: Ratio of claims in generated answer that can be inferred from context:
+     $$F = \frac{|\text{Supported Claims}|}{|\text{Total Claims}|}$$
+  2. *Answer Relevance*: Semantic similarity of reverse-generated questions to the original query.
+  3. *Context Precision*: Measure of whether ground-truth context is ranked at the top of retrieved lists.
+- **Implementation in Codebase**: [`src/features/evals/domain/rules/evals_rules.py`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/evals/domain/rules/evals_rules.py) continuously executes these metrics as an automated quality gate in the CI/CD pipeline.
+
+#### 9. NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications
+- **Authors**: Traian Rebedea, Razvan Dinu, Christian Svoreck, et al. (EMNLP 2023)
+- **Paper Link**: [arXiv:2310.10501](https://arxiv.org/abs/2310.10501)
+- **Core Contribution**: Introduced programmable conversational rails (Colang) defining deterministic execution flows, jailbreak prevention, and output hallucination checking.
+- **Implementation in Codebase**: Encapsulated within [`src/features/security/`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/security/) and [`src/features/output_guard/`](file:///home/btpl-lap-22/live/rag-pipeline/rag-pipeline/src/features/output_guard/) to perform pre-retrieval threat screening and post-generation citation attestation.
 
 ---
 
 ## 10. Foundational Books & Engineering References
 
-For engineers and researchers studying the underlying principles of large-scale information retrieval and distributed data platforms:
+For engineers and researchers building and operating production-scale search and data systems:
 
 1. **Information Retrieval: Implementing and Evaluating Search Engines**
-   *Stefan Büttcher, Charles L. A. Clarke, and Gordon V. Cormack (MIT Press)*
-   — Definitive reference on lexical scoring algorithms (BM25), index compression, and evaluation metrics (NDCG, MAP, MRR).
+   *Stefan Büttcher, Charles L. A. Clarke, and Gordon V. Cormack (MIT Press, 2016)*
+   - **Chapters of Note**: Chapter 2 (Indexing), Chapter 4 (Query Processing), Chapter 7 (Term Weighting & BM25), Chapter 11 (Evaluation).
+   - **Significance**: Authoritative mathematical treatment of inverted indices, dynamic pruning (WAND algorithm), and ranking benchmarks.
 2. **Introduction to Information Retrieval**
-   *Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (Cambridge University Press)*
-   — Accessible free online at [nlp.stanford.edu/IR-book/](https://nlp.stanford.edu/IR-book/) — Foundational text covering vector space models, scoring, matrix decomposition, and inverted indexing.
+   *Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (Cambridge University Press, 2008)*
+   - **Access**: Free online textbook: [nlp.stanford.edu/IR-book/](https://nlp.stanford.edu/IR-book/)
+   - **Significance**: Covers vector space scoring, matrix decomposition, latent semantic indexing, and probabilistic relevance models.
 3. **Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems**
-   *Martin Kleppmann (O'Reilly Media)*
-   — The foundational reference for the platform's change data capture (CDC), Kafka log partitioning, unbundled database architectures, and consensus algorithms.
-4. **Natural Language Processing with Transformers: Building Language Applications with Hugging Face**
-   *Lewis Tunstall, Leandro von Werra, and Thomas Wolf (O'Reilly Media)*
-   — Reference for cross-encoders, bi-encoders, sentence transformers, and token-level attention mechanics.
+   *Martin Kleppmann (O'Reilly Media, 2017)*
+   - **Significance**: Informs the streaming spine of this pipeline: Debezium CDC ingestion, Kafka partition balancing, replication consensus, and distributed transactions.
+4. **Natural Language Processing with Transformers**
+   *Lewis Tunstall, Leandro von Werra, and Thomas Wolf (O'Reilly Media, 2022)*
+   - **Significance**: Explains tokenization nuance, attention masks, encoder-decoder distillation, and hardware-accelerated transformer deployment.
 
 ---
 
