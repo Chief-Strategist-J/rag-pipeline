@@ -1,0 +1,12 @@
+name: observability
+version: 1.0.0
+description: Stage-level request tracing, per-stage latency recording, and span correlation across the entire RAG pipeline
+invariants:
+  - Every pipeline request must record stage-level telemetry: rewritten query, retrieved chunk IDs with RRF scores, reranked set, prompt token count, generated answer, and latency per stage
+  - Traces inherit the strictest security classification of the corpus and must not leak PII or authorization secrets
+  - W3C traceparent propagation must be maintained across all asynchronous feature boundaries
+ports:
+  inbound:
+    - ObservabilityServicePort
+  outbound:
+    - TelemetrySpanCollectorPort
