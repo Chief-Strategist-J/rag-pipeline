@@ -10,6 +10,10 @@ service AuthzRewriteService {
   rpc ProcessRewrite (RewriteRequest) returns (RewriteResponse);
 }
 
+service RagPipelineService {
+  rpc QueryPipeline (PipelineQueryRequestProto) returns (PipelineQueryResponseProto);
+}
+
 message ConversationTurnProto {
   string role = 1;
   string content = 2;
@@ -42,5 +46,31 @@ message RewriteResponse {
   bool success = 1;
   int32 status_code = 2;
   RewrittenQueryDataProto data = 3;
+  string error_message = 4;
+}
+
+message PipelineQueryRequestProto {
+  string query = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  repeated ConversationTurnProto conversation_history = 4;
+}
+
+message PipelineQueryResultProto {
+  string request_id = 1;
+  string tenant_id = 2;
+  string query = 3;
+  string rewritten_query = 4;
+  string answer = 5;
+  repeated string cited_chunk_ids = 6;
+  bool abstained = 7;
+  bool is_grounded = 8;
+  double total_duration_ms = 9;
+}
+
+message PipelineQueryResponseProto {
+  bool success = 1;
+  int32 status_code = 2;
+  PipelineQueryResultProto data = 3;
   string error_message = 4;
 }

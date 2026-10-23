@@ -4,6 +4,7 @@ from fastapi import FastAPI, status
 
 from src.infra.config.settings import settings
 from src.api.rest.v1.routers.authz_rewrite_router import router as authz_rewrite_router
+from src.api.rest.v1.routers.pipeline_router import router as pipeline_router
 
 
 @asynccontextmanager
@@ -20,6 +21,7 @@ app = FastAPI(
 )
 
 app.include_router(authz_rewrite_router, prefix=f"/api/{settings.API_VERSION}")
+app.include_router(pipeline_router, prefix=f"/api/{settings.API_VERSION}")
 
 
 @app.get(
