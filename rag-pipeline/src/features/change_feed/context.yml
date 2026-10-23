@@ -1,0 +1,14 @@
+name: change_feed
+version: 1.0.0
+description: Incremental CDC event stream processor handling document inserts, updates, deletes, and ACL mutations
+invariants:
+  - Source changes must flow through deterministic event envelopes
+  - Deletions and ACL mutations must propagate through the exact same processing path as edits
+  - Downstream document chunks and cached answers must be scrubbed when source deletions occur
+  - Ingestion events must be deduplicated by eventId and idempotencyKey per tenant
+ports:
+  inbound:
+    - ChangeFeedServicePort
+  outbound:
+    - ChangeFeedRepositoryPort
+    - DownstreamInvalidationPort
