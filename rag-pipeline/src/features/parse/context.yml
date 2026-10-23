@@ -1,0 +1,13 @@
+name: parse
+version: 1.0.0
+description: Structural document parser converting raw binary payloads (PDF, DOCX, Markdown, HTML) into structured tables, headers, and text blocks
+invariants:
+  - Multi-column layouts, tables, and scanned pages must be preserved structurally rather than extracted as naive flat text
+  - Corrupted or unparseable payloads must fail with typed ValidationError without crashing worker threads
+  - Structured output must preserve section hierarchy, headings, and bounding table metadata
+ports:
+  inbound:
+    - DocumentParseServicePort
+  outbound:
+    - DocumentParserPort
+    - StorageArtifactPort
