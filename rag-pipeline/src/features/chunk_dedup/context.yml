@@ -1,0 +1,13 @@
+name: chunk_dedup
+version: 1.0.0
+description: Structure-aware chunking and deterministic near-duplicate document deduplication
+invariants:
+  - Chunk IDs must be strictly deterministic (doc ID + version + chunk index) to preserve citations and evaluation labels
+  - Every chunk must carry parent section titles, document metadata, and tenant ownership
+  - Near-duplicate content must be deduplicated using hash/simhash fingerprints preferring current versions
+  - Chunk size must target the optimal token window (300 to 800 tokens) with light overlap
+ports:
+  inbound:
+    - ChunkDedupServicePort
+  outbound:
+    - FingerprintStoragePort
