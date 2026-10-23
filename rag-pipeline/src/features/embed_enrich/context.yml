@@ -1,0 +1,13 @@
+name: embed_enrich
+version: 1.0.0
+description: Hybrid dense and sparse vector embedding generation with filterable multi-tenant ACL metadata enrichment
+invariants:
+  - Both dense vectors (BGE-M3 1024-dim) and sparse/lexical BM25 representations must be computed and stored together
+  - Filterable security metadata (tenant_id, document_id, version, acl_tags, timestamps) must be immutably attached to every vector payload
+  - Sparse representations must capture exact keywords, SKUs, and error codes; dense representations capture semantic intent
+ports:
+  inbound:
+    - EmbedEnrichServicePort
+  outbound:
+    - VectorEmbeddingModelPort
+    - SparseEncodingPort
