@@ -1,0 +1,12 @@
+name: output_guard
+version: 1.0.0
+description: Post-generation security and factual grounding guardrail verifying chunk citation validity, stripping exfiltration links, and neutralizing markdown image injection vectors
+invariants:
+  - Every cited chunk ID must exist within the provided context set; hallucinated IDs must be flagged and removed
+  - Markdown image URLs and external links must be stripped or neutralized to block prompt injection exfiltration channels
+  - Unverified or ungrounded responses must be blocked from egress delivery
+ports:
+  inbound:
+    - OutputGuardServicePort
+  outbound:
+    - GuardAuditPort
