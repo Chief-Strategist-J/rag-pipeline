@@ -6,6 +6,31 @@ A production-grade, zero-trust, multi-tenant Retrieval-Augmented Generation (RAG
 
 ---
 
+## 🟢 Live Production Deployment & Interactive Endpoints
+
+The pipeline is actively deployed and accessible publicly over zero-trust HTTPS:
+
+| Interface | Public URL | Description |
+|---|---|---|
+| **Swagger UI Documentation** | [https://lesser-objective-amount-jean.trycloudflare.com/api/v1/docs](https://lesser-objective-amount-jean.trycloudflare.com/api/v1/docs) | Interactive API exploration and testing console |
+| **OpenAPI 3.1.0 Specification** | [https://lesser-objective-amount-jean.trycloudflare.com/api/v1/openapi.json](https://lesser-objective-amount-jean.trycloudflare.com/api/v1/openapi.json) | Raw contract definition |
+| **Liveness Probe** | [https://lesser-objective-amount-jean.trycloudflare.com/healthz](https://lesser-objective-amount-jean.trycloudflare.com/healthz) | Service health check |
+| **Readiness Probe** | [https://lesser-objective-amount-jean.trycloudflare.com/readyz](https://lesser-objective-amount-jean.trycloudflare.com/readyz) | Cluster readiness verification |
+| **Primary Pipeline Query** | `POST https://lesser-objective-amount-jean.trycloudflare.com/api/v1/pipeline/query` | Zero-trust RAG query endpoint |
+
+### Live Test Command:
+```bash
+curl -X POST https://lesser-objective-amount-jean.trycloudflare.com/api/v1/pipeline/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is the corporate travel expense policy?",
+    "tenantId": "tenant-corp",
+    "userId": "user-1"
+  }'
+```
+
+---
+
 ## 1. What This Is & Why It Is Critically Important
 
 Traditional or naive RAG architectures suffer from five fatal flaws when deployed in enterprise production:
