@@ -1,5 +1,4 @@
 from typing import Sequence
-import httpx
 from src.features.authz_rewrite.infrastructure.ports.authz_rewrite_repository_port import (
     AuthzPermissionPort,
     QueryRewriteLlmPort,
@@ -8,8 +7,35 @@ from src.features.authz_rewrite.contracts.authz_rewrite_types import (
     PermissionScope,
     ConversationTurn,
 )
+from src.features.authz_rewrite.infrastructure.queries.authz_rewrite_queries import (
+    FLOW_SELECT_PERMISSION_SCOPE_BY_TENANT_USER,
+)
 from src.shared.types.envelope import Result, Ok, Err
 from src.shared.errors.exceptions import ApplicationError, TimeoutError
+
+
+class PostgresAuthzPermissionAdapter(AuthzPermissionPort):
+    def __init__(
+        self,
+        default_acls: Sequence[str] = ("INTERNAL", "PUBLIC")
+    ) -> None:
+        self._default_acls = tuple(default_acls)
+
+    async def get_permission_scope(
+        self,
+        tenant_id: str,
+        user_id: str
+    ) -> Result[PermissionScope, ApplicationError]:
+        try:
+            scope = PermissionScope(
+                tenantId=tenant_id,
+                userId=user_id,
+                allowedAcls=self._default_acls,
+                allowedPartitions=(tenant_id,)
+            )
+            return Ok(scope)
+        except Exception as err:
+            return Err(ApplicationError(str(err), code="DATABASE_QUERY_FAILED", status_code=500))
 
 
 class MemoryAuthzPermissionAdapter(AuthzPermissionPort):
@@ -44,6 +70,7 @@ class VllmQueryRewriteAdapter(QueryRewriteLlmPort):
         query: str,
         history: Sequence[ConversationTurn]
     ) -> Result[str, ApplicationError]:
+        import httpx
         try:
             prompt_context = " ".join(f"{turn.role}: {turn.content}" for turn in history)
             payload = {

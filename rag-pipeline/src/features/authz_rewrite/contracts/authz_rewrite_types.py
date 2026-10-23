@@ -1,13 +1,15 @@
-from typing import Sequence, Optional
-from pydantic import BaseModel, Field
+from typing import Sequence
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ConversationTurn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     role: str
     content: str
 
 
 class RewriteInputDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     query: str
     tenantId: str
     userId: str
@@ -16,6 +18,7 @@ class RewriteInputDTO(BaseModel):
 
 
 class PermissionScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     tenantId: str
     userId: str
     allowedAcls: Sequence[str]
@@ -23,6 +26,7 @@ class PermissionScope(BaseModel):
 
 
 class RewrittenQueryOutputDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     originalQuery: str
     rewrittenQuery: str
     wasRewritten: bool

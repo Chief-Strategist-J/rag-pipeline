@@ -3,4 +3,5 @@ from src.infra.clients.graphql_client import ReusableGraphqlClient
 
 __all__ = [
     "ReusableHttpClient",
-    "ReusableGraphqlClient",]
+    "ReusableGraphqlClient",
+]
