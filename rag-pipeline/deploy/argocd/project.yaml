@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: rag-project
+  namespace: argocd
+spec:
+  description: Multi-tenant Enterprise RAG Pipeline ArgoCD Project
+  sourceRepos:
+    - "https://github.com/Chief-Strategist-J/rag-pipeline.git"
+  destinations:
+    - namespace: "rag-*"
+      server: "https://kubernetes.default.svc"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

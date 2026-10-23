@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: rag-pipeline-set
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - env: dev
+            namespace: rag-dev
+          - env: staging
+            namespace: rag-staging
+          - env: prod
+            namespace: rag-prod
+  template:
+    metadata:
+      name: "rag-pipeline-{{env}}"
+      labels:
+        app.kubernetes.io/name: rag-pipeline
+        environment: "{{env}}"
+    spec:
+      project: rag-project
+      source:
+        repoURL: "https://github.com/Chief-Strategist-J/rag-pipeline.git"
+        targetRevision: main
+        path: "rag-pipeline/deploy/k8s/overlays/{{env}}"
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: "{{namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
