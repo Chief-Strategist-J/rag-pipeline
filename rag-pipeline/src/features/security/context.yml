@@ -1,0 +1,12 @@
+name: security
+version: 1.0.0
+description: Untrusted document input sanitization, prompt injection defense, and structural boundary segregation
+invariants:
+  - Retrieved documents must be treated as untrusted data and never interpreted as system instructions
+  - Injected instructions ("ignore previous instructions", "jailbreak", "system override") must be detected, flagged, and neutralized
+  - Side-effecting tools must never be invoked without independent per-action authorization checks
+ports:
+  inbound:
+    - SecurityInspectionServicePort
+  outbound:
+    - ThreatDetectionPort
