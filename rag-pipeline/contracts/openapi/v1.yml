@@ -1,0 +1,247 @@
+openapi: 3.1.0
+info:
+  title: RAG Pipeline Delivery API
+  version: 1.0.0
+  description: Production-grade RAG pipeline API contract adhering to RFC 9457 and strict response envelopes.
+
+servers:
+  - url: /api/v1
+    description: V1 Production Prefix
+
+paths:
+  /authz-rewrite/process:
+    post:
+      summary: Resolve authorization scope and rewrite conversational query
+      operationId: processAuthzRewrite
+      parameters:
+        - name: traceparent
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: x-request-id
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: x-tenant-id
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewriteInputPayload'
+      responses:
+        '200':
+          description: Query successfully processed and contextualized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthzRewriteResponseEnvelope'
+        '400':
+          description: Validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+        '500':
+          description: Internal processing exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+
+components:
+  schemas:
+    ConversationTurn:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+      additionalProperties: false
+
+    RewriteInputPayload:
+      type: object
+      required:
+        - query
+        - tenantId
+        - userId
+      properties:
+        query:
+          type: string
+          minLength: 1
+        tenantId:
+          type: string
+          minLength: 1
+        userId:
+          type: string
+          minLength: 1
+        conversationHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationTurn'
+          default: []
+        skipRewriteIfFirstTurn:
+          type: boolean
+          default: true
+      additionalProperties: false
+
+    PermissionScope:
+      type: object
+      required:
+        - tenantId
+        - userId
+        - allowedAcls
+        - allowedPartitions
+      properties:
+        tenantId:
+          type: string
+        userId:
+          type: string
+        allowedAcls:
+          type: array
+          items:
+            type: string
+        allowedPartitions:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+
+    RewrittenQueryData:
+      type: object
+      required:
+        - originalQuery
+        - rewrittenQuery
+        - wasRewritten
+        - permissionScope
+        - resolvedTenantId
+      properties:
+        originalQuery:
+          type: string
+        rewrittenQuery:
+          type: string
+        wasRewritten:
+          type: boolean
+        permissionScope:
+          $ref: '#/components/schemas/PermissionScope'
+        resolvedTenantId:
+          type: string
+      additionalProperties: false
+
+    ResponseMeta:
+      type: object
+      required:
+        - requestId
+        - timestamp
+        - executionTimeMs
+        - apiVersion
+      properties:
+        requestId:
+          type: string
+        correlationId:
+          type: string
+          nullable: true
+        causationId:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        executionTimeMs:
+          type: integer
+        apiVersion:
+          type: string
+      additionalProperties: false
+
+    ErrorDetail:
+      type: object
+      required:
+        - field
+        - issue
+        - rule
+      properties:
+        field:
+          type: string
+        issue:
+          type: string
+        rule:
+          type: string
+        rejectedValue:
+          nullable: true
+      additionalProperties: false
+
+    ResponseError:
+      type: object
+      required:
+        - code
+        - message
+        - retryable
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        retryable:
+          type: boolean
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+          default: []
+      additionalProperties: false
+
+    AuthzRewriteResponseEnvelope:
+      type: object
+      required:
+        - success
+        - statusCode
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/RewrittenQueryData'
+        error:
+          nullable: true
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+
+    ErrorResponseEnvelope:
+      type: object
+      required:
+        - success
+        - statusCode
+        - data
+        - error
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: false
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          nullable: true
+        error:
+          $ref: '#/components/schemas/ResponseError'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false

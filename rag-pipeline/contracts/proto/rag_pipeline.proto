@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package rag.v1;
+
+option go_package = "rag/v1;ragv1";
+option java_multiple_files = true;
+option java_package = "com.rag.pipeline.v1";
+
+service AuthzRewriteService {
+  rpc ProcessRewrite (RewriteRequest) returns (RewriteResponse);
+}
+
+message ConversationTurnProto {
+  string role = 1;
+  string content = 2;
+}
+
+message RewriteRequest {
+  string query = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  repeated ConversationTurnProto conversation_history = 4;
+  bool skip_rewrite_if_first_turn = 5;
+}
+
+message PermissionScopeProto {
+  string tenant_id = 1;
+  string user_id = 2;
+  repeated string allowed_acls = 3;
+  repeated string allowed_partitions = 4;
+}
+
+message RewrittenQueryDataProto {
+  string original_query = 1;
+  string rewritten_query = 2;
+  bool was_rewritten = 3;
+  PermissionScopeProto permission_scope = 4;
+  string resolved_tenant_id = 5;
+}
+
+message RewriteResponse {
+  bool success = 1;
+  int32 status_code = 2;
+  RewrittenQueryDataProto data = 3;
+  string error_message = 4;
+}
