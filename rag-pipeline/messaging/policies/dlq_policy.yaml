@@ -1,0 +1,11 @@
+dlqPolicy:
+  targetTopic: rag.dlq.v1
+  retryStrategy:
+    maxRetries: 3
+    initialBackoffMs: 1000
+    backoffMultiplier: 2.0
+    maxBackoffMs: 10000
+  conditions:
+    - DESERIALIZATION_FAILURE
+    - SCHEMA_VALIDATION_FAILURE
+    - REPEATED_DOWNSTREAM_TIMEOUT

@@ -1,0 +1,24 @@
+topics:
+  - name: rag.cdc.documents.v1
+    partitions: 6
+    replicationFactor: 3
+    configs:
+      cleanup.policy: delete
+      retention.ms: "604800000"
+      min.insync.replicas: "2"
+
+  - name: rag.events.indexed.v1
+    partitions: 6
+    replicationFactor: 3
+    configs:
+      cleanup.policy: delete
+      retention.ms: "604800000"
+      min.insync.replicas: "2"
+
+  - name: rag.dlq.v1
+    partitions: 3
+    replicationFactor: 3
+    configs:
+      cleanup.policy: delete
+      retention.ms: "2592000000"
+      min.insync.replicas: "2"
