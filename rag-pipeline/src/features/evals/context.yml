@@ -1,0 +1,13 @@
+name: evals
+version: 1.0.0
+description: Independent retrieval and answer generation evaluation measuring Recall@K, MRR, Faithfulness, and Abstain rates
+invariants:
+  - Retrieval and answer generation must be measured separately to isolate chunking, retrieval, reranking, and generation regressions
+  - Retrieval evaluations must compute Recall@K and Mean Reciprocal Rank (MRR) against labeled golden sets
+  - Answer evaluations must compute Faithfulness (groundedness in context) and Question Relevance
+  - Abstain rate drift towards zero must trigger an alarm for potential LLM hallucination
+ports:
+  inbound:
+    - EvalsServicePort
+  outbound:
+    - EvalMetricStoragePort
