@@ -1,0 +1,13 @@
+name: index
+version: 1.0.0
+description: Qdrant hybrid sparse and dense collection management, multi-tenant partitioning, and zero-downtime parallel index versioning
+invariants:
+  - Vector indices must be versioned from day one (v1, v2) with parallel indexing, shadow evaluation, and instantaneous rollback capability
+  - Multi-tenant partitioning must isolate tenant vectors and prevent recall degradation under selective ACL filters
+  - All writes must upsert both dense vectors (1024-dim cosine) and sparse vectors with filterable payload payloads
+ports:
+  inbound:
+    - IndexServicePort
+  outbound:
+    - QdrantCollectionPort
+    - IndexMetadataRegistryPort
