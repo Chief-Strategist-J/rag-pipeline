@@ -26,6 +26,10 @@ from src.features.generate.service.generate_service import GenerateService, Gene
 from src.features.generate.contracts.generate_types import GenerationRequestDTO
 from src.features.generate.infrastructure.adapters.generate_adapters import VllmQwenGeneratorAdapter
 
+from src.features.security.service.security_service import SecurityService, SecurityServiceDeps
+from src.features.security.contracts.security_types import SecurityInspectionRequestDTO
+from src.features.security.infrastructure.adapters.security_adapters import MemoryThreatDetectionAdapter
+
 from src.features.output_guard.service.output_guard_service import OutputGuardService, OutputGuardServiceDeps
 from src.features.output_guard.contracts.output_guard_types import GuardInspectionRequestDTO
 from src.features.output_guard.infrastructure.adapters.output_guard_adapters import MemoryGuardAuditAdapter
@@ -45,6 +49,11 @@ class EndToEndPipelineOrchestrator:
             type("AuthzDeps", (), {
                 "authz_port": MemoryAuthzPermissionAdapter(),
                 "rewrite_port": VllmQueryRewriteAdapter("http://127.0.0.1:8000", "Qwen2.5")
+            })()
+        )
+        self.security_service = SecurityService(
+            type("SecurityDeps", (), {
+                "threat_port": MemoryThreatDetectionAdapter()
             })()
         )
         self.embed_service = EmbedEnrichService(
@@ -165,12 +174,26 @@ class EndToEndPipelineOrchestrator:
         top_chunks = rerank_res.value.rankedChunks
         stages.append(PipelineStageMetricsDTO(stageName="rerank", durationMs=s4_dur, status="OK"))
 
-        # 5. Generate
+        # 5. Security Inspection on Context & Query
+        s_sec_start = time.perf_counter()
+        sec_query_res = await self.security_service.inspect_content(
+            SecurityInspectionRequestDTO(
+                tenantId=tenant_id,
+                content=authz_out.rewrittenQuery,
+                sourceType="USER_QUERY",
+                correlationId=request_id
+            )
+        )
+        s_sec_dur = (time.perf_counter() - s_sec_start) * 1000.0
+        stages.append(PipelineStageMetricsDTO(stageName="security", durationMs=s_sec_dur, status="OK"))
+        safe_query = sec_query_res.value.sanitizedContent if sec_query_res.is_ok else authz_out.rewrittenQuery
+
+        # 6. Generate
         s5_start = time.perf_counter()
         gen_res = await self.generate_service.generate_answer(
             GenerationRequestDTO(
                 tenantId=tenant_id,
-                query=authz_out.rewrittenQuery,
+                query=safe_query,
                 contextChunks=top_chunks,
                 correlationId=request_id
             )
@@ -181,7 +204,7 @@ class EndToEndPipelineOrchestrator:
         gen_out = gen_res.value
         stages.append(PipelineStageMetricsDTO(stageName="generate", durationMs=s5_dur, status="OK"))
 
-        # 6. Output Guard
+        # 7. Output Guard
         s6_start = time.perf_counter()
         guard_res = await self.guard_service.inspect_and_sanitize(
             GuardInspectionRequestDTO(
