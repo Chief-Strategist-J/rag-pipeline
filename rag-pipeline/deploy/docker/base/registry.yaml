@@ -1,0 +1,14 @@
+# Registry configuration for base and service container images
+registries:
+  default:
+    url: docker.io
+    organization: Chief-Strategist-J
+    images:
+      base:
+        name: rag-pipeline-base
+        tag: 0.1.0
+        dockerfile: deploy/docker/base/Dockerfile.base
+      service:
+        name: rag-pipeline-service
+        tag: 0.1.0
+        dockerfile: deploy/docker/service/Dockerfile

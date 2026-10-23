@@ -1,0 +1,253 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/service/Dockerfile
+    image: rag-pipeline:latest
+    container_name: rag-pipeline-app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      langfuse-web:
+        condition: service_healthy
+    env_file:
+      - ../../.env
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - PORT=8000
+      - HOST=0.0.0.0
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - VALKEY_URL=redis://valkey:6379/0
+      - LANGFUSE_HOST=http://langfuse-web:3000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    networks:
+      segment-public:
+        ipv4_address: 172.28.10.10
+      segment-internal:
+        ipv4_address: 172.28.20.10
+      segment-data:
+        ipv4_address: 172.28.30.10
+      segment-observability:
+        ipv4_address: 172.28.40.10
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: rag-zookeeper-poly
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data_poly:/var/lib/zookeeper/data
+      - zookeeper_log_poly:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      segment-internal:
+        ipv4_address: 172.28.20.11
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: rag-kafka-poly
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+    volumes:
+      - kafka_data_poly:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 25s
+    networks:
+      segment-internal:
+        ipv4_address: 172.28.20.12
+
+  qdrant:
+    image: qdrant/qdrant:v1.11.0
+    container_name: rag-qdrant-poly
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    volumes:
+      - qdrant_storage_poly:/qdrant/storage
+      - qdrant_snapshots_poly:/qdrant/snapshots
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__STORAGE__ON_DISK_PAYLOAD: "true"
+      QDRANT__STORAGE__WAL__WAL_CAPACITY_MB: 32
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      segment-data:
+        ipv4_address: 172.28.30.20
+
+  valkey:
+    image: valkey/valkey:7.2.5
+    container_name: rag-valkey-poly
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: >
+      valkey-server
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --dir /data
+    volumes:
+      - valkey_data_poly:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      segment-data:
+        ipv4_address: 172.28.30.21
+
+  langfuse-db:
+    image: postgres:15-alpine
+    container_name: rag-langfuse-db-poly
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse_db_data_poly:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      segment-observability:
+        ipv4_address: 172.28.40.30
+
+  langfuse-web:
+    image: langfuse/langfuse:2
+    container_name: rag-langfuse-web-poly
+    restart: unless-stopped
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: secret_key_for_langfuse_auth_min_32_characters
+      SALT: secret_salt_for_langfuse_min_32_characters
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/public/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      segment-public:
+        ipv4_address: 172.28.10.31
+      segment-observability:
+        ipv4_address: 172.28.40.31
+
+networks:
+  segment-public:
+    name: rag-segment-public
+    driver: bridge
+    internal: false
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.10.0/24
+          gateway: 172.28.10.1
+  segment-internal:
+    name: rag-segment-internal
+    driver: bridge
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.20.0/24
+          gateway: 172.28.20.1
+  segment-data:
+    name: rag-segment-data
+    driver: bridge
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.30.0/24
+          gateway: 172.28.30.1
+  segment-observability:
+    name: rag-segment-observability
+    driver: bridge
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.40.0/24
+          gateway: 172.28.40.1
+
+volumes:
+  zookeeper_data_poly:
+    name: rag_zookeeper_data_poly
+  zookeeper_log_poly:
+    name: rag_zookeeper_log_poly
+  kafka_data_poly:
+    name: rag_kafka_data_poly
+  qdrant_storage_poly:
+    name: rag_qdrant_storage_poly
+  qdrant_snapshots_poly:
+    name: rag_qdrant_snapshots_poly
+  valkey_data_poly:
+    name: rag_valkey_data_poly
+  langfuse_db_data_poly:
+    name: rag_langfuse_db_data_poly

@@ -1,0 +1,19 @@
+# Docker Build and Packaging Ignore Rules
+.git/
+.gitignore
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+.venv/
+env/
+venv/
+.DS_Store
+*.log
