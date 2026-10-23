@@ -1,7 +1,7 @@
 """
 Centralized Configuration Loader and Validator.
 """
-from typing import Optional
+from typing import Optional, Tuple
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -40,7 +40,15 @@ class AppSettings(BaseSettings):
 
     EMBEDDING_SERVE_URL: str = Field(default="http://localhost:8081")
     RERANKER_SERVE_URL: str = Field(default="http://localhost:8082")
+
+    GENERATION_ENGINE: str = Field(default="vllm")
     VLLM_ENDPOINT: str = Field(default="http://localhost:8000/v1")
+    GENERATION_MODEL: str = Field(default="Qwen/Qwen2.5-7B-Instruct")
+    GENERATION_MAX_TOKENS: int = Field(default=1024)
+    GENERATION_TEMPERATURE: float = Field(default=0.0)
+    GENERATION_TIMEOUT_SECONDS: float = Field(default=3.0)
+
+    DEFAULT_ALLOWED_ACLS: Tuple[str, ...] = Field(default=("INTERNAL", "PUBLIC"))
 
 
 settings = AppSettings()

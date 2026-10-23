@@ -19,10 +19,13 @@ router = APIRouter(prefix="/authz-rewrite", tags=["AuthzRewrite"])
 
 class ServiceDependencies:
     def __init__(self) -> None:
-        self.authz_port = MemoryAuthzPermissionAdapter()
+        self.authz_port = MemoryAuthzPermissionAdapter(
+            default_acls=settings.DEFAULT_ALLOWED_ACLS
+        )
         self.rewrite_port = VllmQueryRewriteAdapter(
             endpoint=settings.VLLM_ENDPOINT,
-            model_name="Qwen/Qwen2.5-7B-Instruct"
+            model_name=settings.GENERATION_MODEL,
+            timeout_seconds=settings.GENERATION_TIMEOUT_SECONDS
         )
 
 

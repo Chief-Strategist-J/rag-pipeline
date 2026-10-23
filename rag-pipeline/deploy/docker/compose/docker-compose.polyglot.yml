@@ -23,13 +23,33 @@ services:
       - ../../.env
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
-      - PORT=8000
-      - HOST=0.0.0.0
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
-      - VALKEY_URL=redis://valkey:6379/0
-      - LANGFUSE_HOST=http://langfuse-web:3000
+      - PORT=${PORT:-8000}
+      - HOST=${HOST:-0.0.0.0}
+      - API_VERSION=${API_VERSION:-v1}
+      - SERVICE_NAME=${SERVICE_NAME:-rag-pipeline}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      - KAFKA_TOPIC_CHANGE_FEED=${KAFKA_TOPIC_CHANGE_FEED:-rag.cdc.change-feed.v1}
+      - KAFKA_TOPIC_INGESTION=${KAFKA_TOPIC_INGESTION:-rag.ingestion.v1}
+      - KAFKA_CONSUMER_GROUP=${KAFKA_CONSUMER_GROUP:-rag-pipeline-workers}
+      - QDRANT_HOST=${QDRANT_HOST:-qdrant}
+      - QDRANT_PORT=${QDRANT_PORT:-6333}
+      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-rag_corpus_v1}
+      - VALKEY_URL=${VALKEY_URL:-redis://valkey:6379/0}
+      - VALKEY_TTL_SECONDS=${VALKEY_TTL_SECONDS:-3600}
+      - EMBEDDING_SERVE_URL=${EMBEDDING_SERVE_URL:-http://localhost:8081}
+      - RERANKER_SERVE_URL=${RERANKER_SERVE_URL:-http://localhost:8082}
+      - GENERATION_ENGINE=${GENERATION_ENGINE:-vllm}
+      - VLLM_ENDPOINT=${VLLM_ENDPOINT:-http://localhost:8000/v1}
+      - GENERATION_MODEL=${GENERATION_MODEL:-Qwen/Qwen2.5-7B-Instruct}
+      - GENERATION_MAX_TOKENS=${GENERATION_MAX_TOKENS:-1024}
+      - GENERATION_TEMPERATURE=${GENERATION_TEMPERATURE:-0.0}
+      - GENERATION_TIMEOUT_SECONDS=${GENERATION_TIMEOUT_SECONDS:-3.0}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-rag-pipeline}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4317}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-http://langfuse-web:3000}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz || exit 1"]
       interval: 15s
