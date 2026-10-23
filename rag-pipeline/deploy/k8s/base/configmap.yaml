@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rag-pipeline-config
+  labels:
+    app.kubernetes.io/name: rag-pipeline
+data:
+  ENVIRONMENT: "production"
+  PORT: "8000"
+  HOST: "0.0.0.0"
+  SERVICE_NAME: "rag-pipeline"
+  API_VERSION: "v1"
+  VLLM_ENDPOINT: "http://vllm-service:8000"
+  TEI_EMBED_ENDPOINT: "http://tei-embed-service:8080"
+  TEI_RERANK_ENDPOINT: "http://tei-rerank-service:8080"
+  QDRANT_HOST: "qdrant"
+  QDRANT_PORT: "6333"
+  VALKEY_HOST: "valkey"
+  VALKEY_PORT: "6379"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
