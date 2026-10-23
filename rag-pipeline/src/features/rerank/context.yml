@@ -1,0 +1,12 @@
+name: rerank
+version: 1.0.0
+description: Cross-encoder reranker refining top hybrid retrieval candidates to a concise, high-relevance top 5 to 8 set
+invariants:
+  - Cross-encoder reranking must operate within a strict 50 to 300 ms latency budget
+  - Output candidate set must be capped to top 5 to 8 chunks to prevent LLM attention dilution ("lost in the middle")
+  - Reranker scores must normalize between 0.0 and 1.0 and preserve chunk identifiers and metadata
+ports:
+  inbound:
+    - RerankServicePort
+  outbound:
+    - CrossEncoderModelPort
