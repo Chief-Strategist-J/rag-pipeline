@@ -1,0 +1,12 @@
+name: retrieve
+version: 1.0.0
+description: Dense and sparse hybrid vector retrieval with in-query ACL filtering and Reciprocal Rank Fusion (RRF)
+invariants:
+  - ACL and tenant filters must be applied inside the vector query, never post-filtered
+  - Hybrid search must retrieve generous candidate sets (top 30 to 100) from both dense and sparse channels
+  - Reciprocal Rank Fusion (RRF with k=60) must fuse dense and sparse ranks into a deterministic scored candidate list
+ports:
+  inbound:
+    - RetrieveServicePort
+  outbound:
+    - HybridVectorSearchPort
