@@ -303,6 +303,66 @@ curl -X POST http://localhost:8000/api/v1/pipeline/query \
 
 ---
 
-## 9. License
+## 9. Research Papers & Academic References
+
+The design, algorithmic choices, and safety guarantees of this platform are grounded in peer-reviewed machine learning, information retrieval, and systems research:
+
+### Foundational RAG & Retrieval
+- **Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks**
+  *Lewis et al. (NeurIPS 2020)*
+  [arXiv:2005.11401](https://arxiv.org/abs/2005.11401) — Foundational paper introducing end-to-end differentiable RAG combining parametric memory with non-parametric dense retrieval.
+- **Dense Passage Retrieval for Open-Domain Question Answering (DPR)**
+  *Karpukhin et al. (EMNLP 2020)*
+  [arXiv:2004.04906](https://arxiv.org/abs/2004.04906) — Establishes bi-encoder architectures for scalable, high-speed dense vector retrieval over Lucene/BM25.
+- **Reciprocal Rank Fusion Outperforms Condorcet and Individual Rank Learning Methods**
+  *Cormack, Clarke, and Büttcher (ACM SIGIR 2009)*
+  [DOI:10.1145/1571941.1572114](https://doi.org/10.1145/1571941.1572114) — Mathematical proof and empirical evidence for Reciprocal Rank Fusion ($k=60$) over heterogeneous retrieval engines.
+
+### Embeddings, Reranking & Hybrid Search
+- **BGE-M3: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings**
+  *Chen et al. (BAAI 2024)*
+  [arXiv:2402.03216](https://arxiv.org/abs/2402.03216) — Multi-modal embedding model supporting simultaneous dense retrieval, multi-vector ColBERT interaction, and sparse lexical matching.
+- **Passage Re-ranking with BERT**
+  *Nogueira and Cho (arXiv 2019)*
+  [arXiv:1901.04085](https://arxiv.org/abs/1901.04085) — Introduces cross-encoder sequence classification for passage reranking, analyzing full query-document mutual attention.
+
+### High-Throughput Serving & Engine Architecture
+- **Efficient Memory Management for Large Language Model Serving with PagedAttention (vLLM)**
+  *Kwon et al. (SOSP 2023)*
+  [arXiv:2309.06180](https://arxiv.org/abs/2309.06180) — Introduces virtual memory paging for KV-caches, achieving $2\times\text{--}4\times$ higher throughput and reduced memory fragmentation in LLM inference.
+- **HNSW: Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs**
+  *Malkov and Yashunin (IEEE TPAMI 2018)*
+  [arXiv:1603.09320](https://arxiv.org/abs/1603.09320) — Graph-based algorithm powering Qdrant's real-time sub-millisecond vector indexing.
+
+### Hallucination, Guardrails & Evaluation
+- **Ragas: Automated Evaluation of Retrieval Augmented Generation**
+  *Es et al. (EACL 2024)*
+  [arXiv:2309.15217](https://arxiv.org/abs/2309.15217) — Framework for reference-free evaluation of RAG pipelines measuring faithfulness, answer relevance, and context precision.
+- **NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications**
+  *Rebedea et al. (EMNLP 2023)*
+  [arXiv:2310.10501](https://arxiv.org/abs/2310.10501) — Programmable rails for steering LLM conversations, preventing prompt injection, and enforcing domain constraints.
+
+---
+
+## 10. Foundational Books & Engineering References
+
+For engineers and researchers studying the underlying principles of large-scale information retrieval and distributed data platforms:
+
+1. **Information Retrieval: Implementing and Evaluating Search Engines**
+   *Stefan Büttcher, Charles L. A. Clarke, and Gordon V. Cormack (MIT Press)*
+   — Definitive reference on lexical scoring algorithms (BM25), index compression, and evaluation metrics (NDCG, MAP, MRR).
+2. **Introduction to Information Retrieval**
+   *Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (Cambridge University Press)*
+   — Accessible free online at [nlp.stanford.edu/IR-book/](https://nlp.stanford.edu/IR-book/) — Foundational text covering vector space models, scoring, matrix decomposition, and inverted indexing.
+3. **Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems**
+   *Martin Kleppmann (O'Reilly Media)*
+   — The foundational reference for the platform's change data capture (CDC), Kafka log partitioning, unbundled database architectures, and consensus algorithms.
+4. **Natural Language Processing with Transformers: Building Language Applications with Hugging Face**
+   *Lewis Tunstall, Leandro von Werra, and Thomas Wolf (O'Reilly Media)*
+   — Reference for cross-encoders, bi-encoders, sentence transformers, and token-level attention mechanics.
+
+---
+
+## 11. License
 
 This project is licensed under the Apache 2.0 License.

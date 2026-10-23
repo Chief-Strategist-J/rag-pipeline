@@ -33,3 +33,15 @@ Core production implementation for the Enterprise RAG Pipeline following hexagon
 ```bash
 python3 -m pytest
 ```
+
+---
+
+## Academic References & Research Foundations
+
+- **RAG**: Lewis et al. (2020), *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*, [arXiv:2005.11401](https://arxiv.org/abs/2005.11401).
+- **Dense Retrieval**: Karpukhin et al. (2020), *Dense Passage Retrieval (DPR)*, [arXiv:2004.04906](https://arxiv.org/abs/2004.04906).
+- **RRF Fusion**: Cormack et al. (2009), *Reciprocal Rank Fusion*, [DOI:10.1145/1571941.1572114](https://doi.org/10.1145/1571941.1572114).
+- **Embeddings**: Chen et al. (2024), *BGE-M3: Multi-Lingual, Multi-Granularity Text Embeddings*, [arXiv:2402.03216](https://arxiv.org/abs/2402.03216).
+- **Cross-Encoder Reranking**: Nogueira & Cho (2019), *Passage Re-ranking with BERT*, [arXiv:1901.04085](https://arxiv.org/abs/1901.04085).
+- **High-Throughput Serving**: Kwon et al. (2023), *PagedAttention / vLLM*, [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).
+- **Evaluation**: Es et al. (2024), *Ragas: Automated Evaluation of RAG*, [arXiv:2309.15217](https://arxiv.org/abs/2309.15217).
