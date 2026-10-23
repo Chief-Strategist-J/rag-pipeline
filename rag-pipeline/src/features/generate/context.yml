@@ -1,0 +1,13 @@
+name: generate
+version: 1.0.0
+description: LLM answer generation with explicit chunk citation, abstain mechanism for insufficient context, and prompt caching optimization
+invariants:
+  - Generation model must answer strictly from the provided context and never hallucinate from internal weights
+  - Model must return an explicit abstain flag if the context does not contain sufficient information to address the query
+  - Prompt structure must place the static system prompt first and context second to maximize KV cache hits
+  - Every answer claim must reference valid chunk IDs from the input context
+ports:
+  inbound:
+    - GenerateServicePort
+  outbound:
+    - LlmInferencePort
