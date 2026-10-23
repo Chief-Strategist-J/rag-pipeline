@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rag-pipeline-staging
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rag-pipeline
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Chief-Strategist-J/rag-pipeline.git
+    targetRevision: main
+    path: rag-pipeline/deploy/k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rag-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

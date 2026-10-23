@@ -1,0 +1,101 @@
+asyncapi: 3.0.0
+info:
+  title: RAG Pipeline Event Streaming Contract
+  version: 1.0.0
+  description: Kafka messaging contract for Debezium CDC and pipeline stage transitions
+
+channels:
+  documentCdcEvents:
+    address: rag.cdc.documents.v1
+    messages:
+      documentCdcMessage:
+        $ref: '#/components/messages/DocumentCdcMessage'
+
+  documentIndexedEvents:
+    address: rag.events.indexed.v1
+    messages:
+      documentIndexedMessage:
+        $ref: '#/components/messages/DocumentIndexedMessage'
+
+operations:
+  receiveDocumentCdc:
+    action: receive
+    channel:
+      $ref: '#/channels/documentCdcEvents'
+    summary: Ingest document CDC modifications and deletions from Debezium
+
+  publishDocumentIndexed:
+    action: send
+    channel:
+      $ref: '#/channels/documentIndexedEvents'
+    summary: Publish completion notification when document chunks are indexed in Qdrant
+
+components:
+  messages:
+    DocumentCdcMessage:
+      name: DocumentCdcMessage
+      payload:
+        $ref: '#/components/schemas/DocumentCdcPayload'
+
+    DocumentIndexedMessage:
+      name: DocumentIndexedMessage
+      payload:
+        $ref: '#/components/schemas/DocumentIndexedPayload'
+
+  schemas:
+    DocumentCdcPayload:
+      type: object
+      required:
+        - eventId
+        - tenantId
+        - documentId
+        - op
+        - version
+        - timestamp
+      properties:
+        eventId:
+          type: string
+        tenantId:
+          type: string
+        documentId:
+          type: string
+        op:
+          type: string
+          enum: [c, u, d, r]
+        rawText:
+          type: string
+        version:
+          type: integer
+        aclTags:
+          type: array
+          items:
+            type: string
+        timestamp:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    DocumentIndexedPayload:
+      type: object
+      required:
+        - eventId
+        - tenantId
+        - documentId
+        - version
+        - chunkCount
+        - indexedAt
+      properties:
+        eventId:
+          type: string
+        tenantId:
+          type: string
+        documentId:
+          type: string
+        version:
+          type: integer
+        chunkCount:
+          type: integer
+        indexedAt:
+          type: string
+          format: date-time
+      additionalProperties: false
