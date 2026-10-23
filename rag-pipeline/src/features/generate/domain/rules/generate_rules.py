@@ -18,7 +18,7 @@ def build_generation_prompt(query: str, context_chunks: Sequence[RerankedChunkDT
 
 
 def extract_cited_chunk_ids(answer_text: str) -> List[str]:
-    pattern = r"\[([a-zA-Z0-9_:\-#]+)\]"
+    pattern = r"\[([a-zA-Z0-9_\-]+:[a-zA-Z0-9_:\-]+)\]"
     matches = re.findall(pattern, answer_text)
     return sorted(list(set(matches)))
 

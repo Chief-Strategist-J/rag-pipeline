@@ -43,7 +43,7 @@ class OutputGuardWorkflow:
             return Err(t_insp.error)
         state = t_insp.value
 
-        cited_in_text = re.findall(r"\[([a-zA-Z0-9_:\-#]+)\]", sanitized_text)
+        cited_in_text = re.findall(r"\[([a-zA-Z0-9_\-]+:[a-zA-Z0-9_:\-]+)\]", sanitized_text)
         valid_citations, hallucinated_citations = validate_citations(
             cited_chunk_ids=cited_in_text,
             allowed_chunk_ids=request.providedChunkIds

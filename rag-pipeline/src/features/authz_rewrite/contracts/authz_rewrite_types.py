@@ -3,13 +3,13 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class ConversationTurn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", strict=True)
     role: str
     content: str
 
 
 class RewriteInputDTO(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", strict=True)
     query: str
     tenantId: str
     userId: str

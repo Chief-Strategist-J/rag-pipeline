@@ -18,7 +18,7 @@ router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 
 
 class PipelineQueryRequestDTO(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", strict=True)
 
     tenantId: str = Field(min_length=1)
     userId: str = Field(min_length=1)
