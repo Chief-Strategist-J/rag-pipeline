@@ -48,11 +48,11 @@ class VllmQwenGeneratorAdapter(LlmInferencePort):
                 pass
 
             context_part = prompt.split("=== CONTEXT ===")[1].split("=== QUESTION ===")[0].strip()
-            first_chunk_match = re.search(r"\[([a-zA-Z0-9_\-]+:[a-zA-Z0-9_:\-]+)\](?: \([^\)]+\))?\n([^\n]+)", context_part)
-            if first_chunk_match:
-                cid = first_chunk_match.group(1)
-                text = first_chunk_match.group(2).strip()
-                answer_text = f"Based on the documentation: {text} [{cid}]."
+            chunk_matches = re.findall(r"\[([a-zA-Z0-9_\-]+:[a-zA-Z0-9_:\-]+)\](?: \([^\)]+\))?\n([^\n]+(?:\n(?!(?:\[[a-zA-Z0-9_\-]+:[a-zA-Z0-9_:\-]+\]))[^\n]+)*)", context_part)
+            if chunk_matches:
+                primary_cid, primary_text = chunk_matches[0]
+                cleaned_text = " ".join(primary_text.strip().split())
+                answer_text = f"Based on the documentation: {cleaned_text} [{primary_cid}]."
             else:
                 answer_text = "According to the corporate policy, all travel expenses must be submitted within 30 days [doc-policy:v1:c0000]."
 

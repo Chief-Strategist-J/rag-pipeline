@@ -20,11 +20,17 @@ class MemoryHybridVectorSearchAdapter(HybridVectorSearchPort):
         permission_scope: PermissionScope,
         limit: int
     ) -> Result[Sequence[EnrichedChunkVectorDTO], ApplicationError]:
+        def _score(p: EnrichedChunkVectorDTO) -> float:
+            if not p.denseVector or len(p.denseVector) != len(vector):
+                return 0.0
+            return sum(a * b for a, b in zip(vector, p.denseVector))
+
         filtered = [
             p for p in self._points
             if p.tenantId == tenant_id and any(acl in permission_scope.allowedAcls for acl in p.aclTags)
         ]
-        return Ok(tuple(filtered[:limit]))
+        sorted_points = sorted(filtered, key=_score, reverse=True)
+        return Ok(tuple(sorted_points[:limit]))
 
     async def search_sparse(
         self,

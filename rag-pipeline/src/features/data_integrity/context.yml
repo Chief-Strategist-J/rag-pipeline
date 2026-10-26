@@ -1,0 +1,25 @@
+name: data_integrity
+version: 1.0.0
+description: Three-gate database data integrity enforcer implementing strict ingress validation, domain lifecycle invariants, and authoritative storage constraints with zero repair
+invariants:
+  - Invalid data must be rejected at write time at the lowest layer that can reject it
+  - Strictly enforce 3 gates: Ingress Gate (schema parse and normalize), Domain Gate (invariant verification), and Storage Authority Gate (SQL constraints)
+  - Reject, never repair: no silent coercion, no silent defaults, and no defensive reads handling corrupted states
+  - Every mandatory-id entity carries five distinct identifier roles: surrogate id (uuidv7), public_id, tenant_id, natural key (source + external_id), and correlation_id
+  - All database constraint violations map directly to stable domain validation errors via a single error registry
+inheritance_chain:
+  class: DataIntegrityService
+  parents:
+    - AbstractDataIntegrityService
+  linearization:
+    - DataIntegrityService
+    - AbstractDataIntegrityService
+  shared_ancestors: []
+  ports:
+    - DataIntegrityServicePort
+    - DataIntegrityRepositoryPort
+ports:
+  inbound:
+    - DataIntegrityServicePort
+  outbound:
+    - DataIntegrityRepositoryPort

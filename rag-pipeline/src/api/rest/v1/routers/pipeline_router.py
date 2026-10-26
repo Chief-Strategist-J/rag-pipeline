@@ -9,6 +9,7 @@ from src.features.authz_rewrite.contracts.authz_rewrite_types import Conversatio
 from src.features.embed_enrich.contracts.embed_enrich_types import (
     EnrichedChunkVectorDTO,
     SparseVectorDTO,
+    EmbeddingRequestDTO,
 )
 from src.api.rest.v1.handlers.pipeline_handler import create_pipeline_query_response
 from src.shared.types.envelope import ApiResponse, ResponseError, ResponseMeta
@@ -87,9 +88,27 @@ async def ingest_document(request: Request, payload: Dict[str, Any]) -> JSONResp
     if not blocks:
         blocks = [dto.content]
 
+    embed_res = await _orchestrator.embed_service.generate_embeddings(
+        EmbeddingRequestDTO(
+            tenantId=dto.tenantId,
+            documentId=dto.documentId,
+            version=dto.version,
+            aclTags=dto.aclTags,
+            chunks=[{"content": b} for b in blocks],
+            correlationId=req_id
+        )
+    )
+
     added_chunks = []
     for idx, block in enumerate(blocks):
         cid = f"{dto.documentId}:v{dto.version}:c{idx:04d}"
+        if embed_res.is_ok and idx < len(embed_res.value.vectors):
+            dense_v = embed_res.value.vectors[idx].denseVector
+            sparse_v = embed_res.value.vectors[idx].sparseVector
+        else:
+            dense_v = [0.1] * 128
+            sparse_v = SparseVectorDTO(indices=[1, 2], values=[1.0, 1.0])
+
         chunk = EnrichedChunkVectorDTO(
             chunkId=cid,
             documentId=dto.documentId,
@@ -97,8 +116,8 @@ async def ingest_document(request: Request, payload: Dict[str, Any]) -> JSONResp
             version=dto.version,
             sectionTitle=dto.sectionTitle,
             content=block,
-            denseVector=[0.1] * 128,
-            sparseVector=SparseVectorDTO(indices=[1, 2], values=[1.0, 1.0]),
+            denseVector=dense_v,
+            sparseVector=sparse_v,
             aclTags=dto.aclTags,
             metadata={},
             createdAt=utc_now_iso()

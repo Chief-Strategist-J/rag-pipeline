@@ -22,7 +22,13 @@ class BgeM3EmbeddingAdapter(VectorEmbeddingModelPort):
         try:
             embeddings: List[Sequence[float]] = []
             for text in texts:
-                raw_vec = [float((abs(hash(text + str(i))) % 1000) / 1000.0) for i in range(self._dim)]
+                raw_vec = [0.0] * self._dim
+                words = text.lower().split()
+                if not words:
+                    words = [text.lower()]
+                for w in words:
+                    idx = abs(hash(w)) % self._dim
+                    raw_vec[idx] += 1.0
                 norm_vec = normalize_dense_vector(raw_vec)
                 embeddings.append(norm_vec)
             return Ok(tuple(embeddings))

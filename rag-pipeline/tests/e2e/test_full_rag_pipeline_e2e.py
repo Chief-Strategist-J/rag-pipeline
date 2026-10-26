@@ -47,4 +47,4 @@ async def test_full_rag_pipeline_execution():
     assert len(orchestrator.obs_collector.exported_envelopes) == 1
     telemetry = orchestrator.obs_collector.exported_envelopes[0]
     assert telemetry.traceId == "4bf92f3577b34da6a3ce929d0e0e4736"
-    assert len(telemetry.stages) == 7
+    assert len(telemetry.stages) == 8

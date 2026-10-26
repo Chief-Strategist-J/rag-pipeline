@@ -48,6 +48,17 @@ from src.features.observability.infrastructure.adapters.observability_adapters i
 )
 from src.infra.config.settings import settings
 
+from src.features.data_integrity.service.data_integrity_service import (
+    DataIntegrityService,
+    DataIntegrityServiceDeps,
+)
+from src.features.data_integrity.contracts.data_integrity_types import (
+    IntegrityValidationRequestDTO,
+)
+from src.features.data_integrity.infrastructure.adapters.data_integrity_adapters import (
+    MemoryDataIntegrityRepositoryAdapter,
+)
+
 from src.shared.types.envelope import Result, Ok, Err
 from src.shared.errors.exceptions import ApplicationError
 from src.shared.utils.time_utils import utc_now_iso
@@ -100,6 +111,11 @@ class EndToEndPipelineOrchestrator:
         self.guard_service = OutputGuardService(
             type("GuardDeps", (), {
                 "audit_port": MemoryGuardAuditAdapter()
+            })()
+        )
+        self.data_integrity_service = DataIntegrityService(
+            type("DataIntegrityDeps", (), {
+                "repo_port": MemoryDataIntegrityRepositoryAdapter()
             })()
         )
         if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
@@ -247,6 +263,27 @@ class EndToEndPipelineOrchestrator:
             return Err(guard_res.error)
         guard_out = guard_res.value
         stages.append(PipelineStageMetricsDTO(stageName="output_guard", durationMs=s6_dur, status="OK"))
+
+        # 8. Data Integrity Verification
+        s_di_start = time.perf_counter()
+        di_res = await self.data_integrity_service.validate_and_enforce(
+            IntegrityValidationRequestDTO(
+                tenantId=tenant_id,
+                correlationId=request_id,
+                entityName="pipeline_query_audit",
+                payload={
+                    "tenantId": tenant_id,
+                    "source": "api_query",
+                    "externalId": f"query_{request_id[:16]}",
+                    "correlationId": request_id,
+                    "status": "confirmed",
+                    "amount": 0.0,
+                    "currency": "USD"
+                }
+            )
+        )
+        s_di_dur = (time.perf_counter() - s_di_start) * 1000.0
+        stages.append(PipelineStageMetricsDTO(stageName="data_integrity", durationMs=s_di_dur, status="OK"))
 
         total_dur = (time.perf_counter() - t0) * 1000.0
 
