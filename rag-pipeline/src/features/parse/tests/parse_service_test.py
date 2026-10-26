@@ -98,3 +98,76 @@ Storage constraints are authoritative.
     blocks = res.value.blocks
     assert len(blocks) >= 2
     assert any("Ingress Gate" in b.sectionTitle for b in blocks)
+
+
+@pytest.mark.asyncio
+async def test_treesitter_ast_parser_multi_languages():
+    from src.features.parse.infrastructure.adapters.parse_adapters import TreeSitterASTDocumentParserAdapter
+    class ASTDeps:
+        def __init__(self):
+            self.parser_port = TreeSitterASTDocumentParserAdapter()
+            self.storage_port = MemoryStorageArtifactAdapter()
+
+    service = ParseService(ASTDeps())
+
+    go_code = """package main
+
+import "fmt"
+
+func CalculateTotal(price float64, qty int) float64 {
+    return price * float64(qty)
+}
+
+type OrderService struct {
+    id string
+}
+"""
+    req_go = ParseRequestDTO(
+        documentId="code-go-1",
+        tenantId="tenant-corp",
+        format=DocumentFormat.GO,
+        rawContent=go_code,
+        correlationId="corr-go-1"
+    )
+    res_go = await service.parse(req_go)
+    assert res_go.is_ok is True
+    blocks_go = res_go.value.blocks
+    assert any(b.blockType == BlockType.FUNCTION for b in blocks_go)
+
+    rust_code = """pub fn compute_hash(data: &[u8]) -> u64 {
+    42
+}
+
+pub struct EngineConfig {
+    pub max_threads: usize,
+}
+"""
+    req_rs = ParseRequestDTO(
+        documentId="code-rs-1",
+        tenantId="tenant-corp",
+        format=DocumentFormat.RUST,
+        rawContent=rust_code,
+        correlationId="corr-rs-1"
+    )
+    res_rs = await service.parse(req_rs)
+    assert res_rs.is_ok is True
+    blocks_rs = res_rs.value.blocks
+    assert any(b.blockType == BlockType.FUNCTION for b in blocks_rs)
+
+    java_code = """public class TokenManager {
+    public boolean isValid(String token) {
+        return token != null;
+    }
+}
+"""
+    req_java = ParseRequestDTO(
+        documentId="code-java-1",
+        tenantId="tenant-corp",
+        format=DocumentFormat.JAVA,
+        rawContent=java_code,
+        correlationId="corr-java-1"
+    )
+    res_java = await service.parse(req_java)
+    assert res_java.is_ok is True
+    blocks_java = res_java.value.blocks
+    assert any(b.blockType == BlockType.CLASS for b in blocks_java)

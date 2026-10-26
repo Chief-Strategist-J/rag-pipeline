@@ -23,6 +23,142 @@ def chunk_document_by_semantic_ast(
     doc_format: DocumentFormat = DocumentFormat.MARKDOWN,
     max_chunk_chars: int = 1500
 ) -> Tuple[SemanticChunkDTO, ...]:
+    CODE_FORMATS = (
+        DocumentFormat.PYTHON,
+        DocumentFormat.TYPESCRIPT,
+        DocumentFormat.JAVASCRIPT,
+        DocumentFormat.GO,
+        DocumentFormat.RUST,
+        DocumentFormat.JAVA,
+        DocumentFormat.KOTLIN,
+        DocumentFormat.SWIFT,
+        DocumentFormat.DART,
+        DocumentFormat.C,
+        DocumentFormat.CPP,
+        DocumentFormat.CSHARP,
+        DocumentFormat.SQL,
+    )
+    if doc_format in CODE_FORMATS:
+        return _chunk_code_by_semantic_ast(tenant_id, document_id, raw_content, doc_format)
+    return _chunk_markdown_by_semantic_ast(tenant_id, document_id, raw_content, doc_format, max_chunk_chars)
+
+
+def _chunk_code_by_semantic_ast(
+    tenant_id: str,
+    document_id: str,
+    raw_content: str,
+    doc_format: DocumentFormat
+) -> Tuple[SemanticChunkDTO, ...]:
+    import tree_sitter_languages
+    from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
+
+    lang_map = {
+        DocumentFormat.PYTHON: "python",
+        DocumentFormat.TYPESCRIPT: "typescript",
+        DocumentFormat.JAVASCRIPT: "javascript",
+        DocumentFormat.GO: "go",
+        DocumentFormat.RUST: "rust",
+        DocumentFormat.JAVA: "java",
+        DocumentFormat.KOTLIN: "kotlin",
+        DocumentFormat.C: "c",
+        DocumentFormat.CPP: "cpp",
+        DocumentFormat.CSHARP: "c_sharp",
+        DocumentFormat.SQL: "sql",
+    }
+    lang_name = lang_map.get(doc_format)
+    chunks: List[SemanticChunkDTO] = []
+
+    if lang_name:
+        parser = tree_sitter_languages.get_parser(lang_name)
+        source_bytes = raw_content.encode("utf-8")
+        tree = parser.parse(source_bytes)
+        root = tree.root_node
+
+        for idx, child in enumerate(root.children):
+            node_bytes = source_bytes[child.start_byte:child.end_byte]
+            content = node_bytes.decode("utf-8").strip()
+            if not content:
+                continue
+
+            node_type = child.type
+            if "function" in node_type or "method" in node_type:
+                b_type = BlockType.FUNCTION
+            elif "class" in node_type or "struct" in node_type or "interface" in node_type:
+                b_type = BlockType.CLASS
+            elif "statement" in node_type or "query" in node_type or doc_format == DocumentFormat.SQL:
+                b_type = BlockType.SQL_STATEMENT if doc_format == DocumentFormat.SQL else BlockType.CODE
+            else:
+                b_type = BlockType.CODE
+
+            cid = f"{document_id}:c{idx:04d}"
+            chunks.append(
+                SemanticChunkDTO(
+                    chunkId=cid,
+                    documentId=document_id,
+                    tenantId=tenant_id,
+                    sectionPath=f"{lang_name.capitalize()} > {node_type}",
+                    nodeType=b_type,
+                    content=content,
+                    startLine=child.start_point[0] + 1,
+                    endLine=child.end_point[0] + 1,
+                    metadata={"format": doc_format.value, "ast_node": node_type}
+                )
+            )
+    else:
+        lc_lang = Language.SWIFT if doc_format == DocumentFormat.SWIFT else None
+        if lc_lang:
+            splitter = RecursiveCharacterTextSplitter.from_language(
+                language=lc_lang,
+                chunk_size=1000,
+                chunk_overlap=50
+            )
+        else:
+            splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=50,
+                separators=["\nclass ", "\nvoid ", "\nFuture ", "\nWidget ", "\n\n", "\n", " "]
+            )
+        split_texts = splitter.split_text(raw_content)
+        for idx, text in enumerate(split_texts):
+            cid = f"{document_id}:c{idx:04d}"
+            chunks.append(
+                SemanticChunkDTO(
+                    chunkId=cid,
+                    documentId=document_id,
+                    tenantId=tenant_id,
+                    sectionPath=f"{doc_format.value.capitalize()} > Chunk",
+                    nodeType=BlockType.CODE,
+                    content=text.strip(),
+                    startLine=1,
+                    endLine=len(text.splitlines()) or 1,
+                    metadata={"format": doc_format.value}
+                )
+            )
+
+    if not chunks:
+        chunks.append(
+            SemanticChunkDTO(
+                chunkId=f"{document_id}:c0000",
+                documentId=document_id,
+                tenantId=tenant_id,
+                sectionPath=f"{doc_format.value.capitalize()} > Root",
+                nodeType=BlockType.CODE,
+                content=raw_content.strip(),
+                startLine=1,
+                endLine=len(raw_content.splitlines()) or 1,
+                metadata={"format": doc_format.value}
+            )
+        )
+    return tuple(chunks)
+
+
+def _chunk_markdown_by_semantic_ast(
+    tenant_id: str,
+    document_id: str,
+    raw_content: str,
+    doc_format: DocumentFormat,
+    max_chunk_chars: int
+) -> Tuple[SemanticChunkDTO, ...]:
     lines = raw_content.splitlines()
     chunks: List[SemanticChunkDTO] = []
     

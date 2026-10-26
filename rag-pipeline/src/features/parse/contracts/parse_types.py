@@ -11,6 +11,16 @@ class DocumentFormat(str, Enum):
     TEXT = "TEXT"
     PYTHON = "PYTHON"
     TYPESCRIPT = "TYPESCRIPT"
+    JAVASCRIPT = "JAVASCRIPT"
+    GO = "GO"
+    RUST = "RUST"
+    JAVA = "JAVA"
+    KOTLIN = "KOTLIN"
+    SWIFT = "SWIFT"
+    DART = "DART"
+    C = "C"
+    CPP = "CPP"
+    CSHARP = "CSHARP"
     SQL = "SQL"
 
 
