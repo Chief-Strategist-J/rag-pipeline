@@ -14,4 +14,5 @@ def sanitize_sensitive_attributes(attributes: Dict[str, str]) -> Dict[str, str]:
 
 
 def validate_trace_id_format(trace_id: str) -> bool:
-    return bool(re.match(r"^[0-9a-fA-F]{16,32}$", trace_id))
+    clean_id = trace_id.replace("-", "")
+    return bool(re.match(r"^[0-9a-fA-F]{16,32}$", clean_id))

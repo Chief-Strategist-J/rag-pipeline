@@ -77,7 +77,7 @@ services:
     container_name: rag-valkey
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     command: >
       valkey-server
       --appendonly yes

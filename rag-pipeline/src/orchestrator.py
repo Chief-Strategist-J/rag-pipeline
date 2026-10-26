@@ -35,8 +35,15 @@ from src.features.output_guard.contracts.output_guard_types import GuardInspecti
 from src.features.output_guard.infrastructure.adapters.output_guard_adapters import MemoryGuardAuditAdapter
 
 from src.features.observability.service.observability_service import ObservabilityService, ObservabilityServiceDeps
-from src.features.observability.contracts.observability_types import RequestTelemetryEnvelopeDTO, PipelineStageMetricsDTO
-from src.features.observability.infrastructure.adapters.observability_adapters import MemoryTelemetryCollectorAdapter
+from src.features.observability.contracts.observability_types import (
+    RequestTelemetryEnvelopeDTO,
+    PipelineStageMetricsDTO,
+)
+from src.features.observability.infrastructure.adapters.observability_adapters import (
+    MemoryTelemetryCollectorAdapter,
+    LangfuseTelemetryCollectorAdapter,
+)
+from src.infra.config.settings import settings
 
 from src.shared.types.envelope import Result, Ok, Err
 from src.shared.errors.exceptions import ApplicationError
@@ -83,7 +90,14 @@ class EndToEndPipelineOrchestrator:
                 "audit_port": MemoryGuardAuditAdapter()
             })()
         )
-        self.obs_collector = MemoryTelemetryCollectorAdapter()
+        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
+            self.obs_collector = LangfuseTelemetryCollectorAdapter(
+                public_key=settings.LANGFUSE_PUBLIC_KEY,
+                secret_key=settings.LANGFUSE_SECRET_KEY,
+                host=settings.LANGFUSE_HOST
+            )
+        else:
+            self.obs_collector = MemoryTelemetryCollectorAdapter()
         self.obs_service = ObservabilityService(
             type("ObsDeps", (), {
                 "collector_port": self.obs_collector

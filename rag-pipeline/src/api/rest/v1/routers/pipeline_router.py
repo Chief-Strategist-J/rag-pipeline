@@ -26,6 +26,17 @@ class PipelineQueryRequestDTO(BaseModel):
     conversationHistory: List[ConversationTurn] = Field(default_factory=list)
 
 
+class DocumentIngestDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    tenantId: str = Field(default="tenant-corp")
+    documentId: str = Field(min_length=1)
+    version: int = Field(default=1)
+    sectionTitle: str = Field(default="General")
+    content: str = Field(min_length=1)
+    aclTags: List[str] = Field(default_factory=lambda: ["INTERNAL", "PUBLIC"])
+
+
 def _init_default_orchestrator() -> EndToEndPipelineOrchestrator:
     seeded_chunk = EnrichedChunkVectorDTO(
         chunkId="doc-policy:v1:c0000",
@@ -47,6 +58,66 @@ _orchestrator = _init_default_orchestrator()
 
 
 @router.post(
+    "/ingest",
+    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse
+)
+async def ingest_document(request: Request, payload: Dict[str, Any]) -> JSONResponse:
+    start_time = time.perf_counter()
+    req_id = request.headers.get("x-request-id") or generate_request_id()
+
+    try:
+        dto = DocumentIngestDTO.model_validate(payload)
+    except Exception as exc:
+        elapsed = int((time.perf_counter() - start_time) * 1000)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content=ApiResponse(
+                success=False,
+                statusCode=400,
+                data=None,
+                error=ResponseError(code="VALIDATION_ERROR", message=str(exc), retryable=False),
+                meta=ResponseMeta(requestId=req_id, timestamp=utc_now_iso(), executionTimeMs=elapsed, apiVersion="v1")
+            ).model_dump()
+        )
+
+    blocks = [b.strip() for b in dto.content.split("\n\n") if b.strip()]
+    if not blocks:
+        blocks = [dto.content]
+
+    added_chunks = []
+    for idx, block in enumerate(blocks):
+        cid = f"{dto.documentId}:v{dto.version}:c{idx:04d}"
+        chunk = EnrichedChunkVectorDTO(
+            chunkId=cid,
+            documentId=dto.documentId,
+            tenantId=dto.tenantId,
+            version=dto.version,
+            sectionTitle=dto.sectionTitle,
+            content=block,
+            denseVector=[0.1] * 128,
+            sparseVector=SparseVectorDTO(indices=[1, 2], values=[1.0, 1.0]),
+            aclTags=dto.aclTags,
+            metadata={},
+            createdAt=utc_now_iso()
+        )
+        _orchestrator.vector_search_adapter.add_point(chunk)
+        added_chunks.append(cid)
+
+    elapsed = int((time.perf_counter() - start_time) * 1000)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=ApiResponse(
+            success=True,
+            statusCode=200,
+            data={"documentId": dto.documentId, "totalChunksAdded": len(added_chunks), "chunkIds": added_chunks},
+            error=None,
+            meta=ResponseMeta(requestId=req_id, timestamp=utc_now_iso(), executionTimeMs=elapsed, apiVersion="v1")
+        ).model_dump()
+    )
+
+
+@router.post(
     "/query",
     status_code=status.HTTP_200_OK,
     response_model=ApiResponse
@@ -54,7 +125,12 @@ _orchestrator = _init_default_orchestrator()
 async def query_pipeline(request: Request, payload: Dict[str, Any]) -> JSONResponse:
     start_time = time.perf_counter()
     req_id = request.headers.get("x-request-id") or generate_request_id()
-    trace_id = request.headers.get("traceparent", "4bf92f3577b34da6a3ce929d0e0e4736")
+    raw_traceparent = request.headers.get("traceparent")
+    if raw_traceparent and "-" in raw_traceparent:
+        parts = raw_traceparent.split("-")
+        trace_id = parts[1] if len(parts) > 1 else generate_request_id()
+    else:
+        trace_id = generate_request_id()
 
     try:
         dto = PipelineQueryRequestDTO.model_validate(payload)
