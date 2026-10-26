@@ -1,105 +1,101 @@
-# Production Graph-RAG Engine Roadmap: 25 Critical Tasks
+# High-Precision & Scalable Graph-RAG Engine Roadmap
 
-Architectural blueprint for building a high-performance Knowledge Graph + Hybrid Vector RAG system designed for IDEs (Claude Code, Cursor, Windsurf, VSCode) and multi-model execution.
+Core architectural blueprint strictly focused on **Retrieval Quality (Precision/Grounding)** and **System Scalability (Throughput/Concurrency)** for enterprise-scale knowledge graphs and hybrid vector retrieval.
 
-Strictly adheres to:
+Strict Invariants:
 - Hexagonal Architecture (`contracts`, `domain`, `infrastructure`, `service`, `tests`)
-- 3-Gate Data Integrity Model (Ingress, Domain Invariants, Storage Authority)
+- 3-Gate Data Integrity Model (Ingress Gate, Domain Invariants, Storage Authority)
 - Zero-comment rule in function bodies
 - Immutable, typed parameter design
+- Distributed non-blocking concurrency (zero stateful in-memory bottleneck)
 
 ---
 
-## Phase I: Code Structure & AST Knowledge Graph Extraction
+## Pillar I: Retrieval Quality & Knowledge Graph Precision
 
-- [ ] **Task 01: Tree-Sitter Polyglot Parser Service**
-  - Implement an AST extraction adapter in `src/features/parse/` using `tree-sitter` (supporting Python, TypeScript, SQL).
-  - Extract deterministic symbols, scopes, function calls, class definitions, and import declarations rather than raw line-based text chunks.
+- [ ] **Task 01: AST-Aware Semantic Chunking**
+  - Implement syntax-aware chunking in `src/features/parse/` using polyglot tree-sitter parsers.
+  - Guarantee class, function, and SQL block boundaries are never severed mid-declaration, preserving contextual integrity.
 
-- [ ] **Task 02: Deterministic Entity Extraction Rules**
-  - Define pure domain rules in `domain/rules/` that parse extracted symbols into discrete graph nodes: `Module`, `Class`, `Function`, `Interface`, `DBTable`, and `PolicyRule`.
+- [ ] **Task 02: Deterministic Entity Resolution & Deduplication**
+  - Build pure normalization and entity deduplication rules in `src/features/chunk_dedup/` and `src/features/data_integrity/`.
+  - Resolve aliased, canonical, and fully qualified symbols into unified entity nodes before persistence.
 
-- [ ] **Task 03: Graph Edge Dependency Schema**
-  - Establish strict relation types: `IMPORTS`, `CALLS`, `INHERITS`, `OVERRIDES`, `WRITES_TO_TABLE`, and `ENFORCES_POLICY` with deeply immutable DTOs (`model_config = ConfigDict(extra="forbid", strict=True)`).
+- [ ] **Task 03: Bidirectional Relationship Graph (Call & Import Graph)**
+  - Construct explicit, typed graph relations: `CALLS`, `INHERITS`, `IMPORTS`, `WRITES_TABLE`, and `ENFORCES_POLICY`.
+  - Enable 2-hop topological traversal to retrieve multi-tier architectural context that flat vectors miss.
 
-- [ ] **Task 04: Neo4j / Memgraph Storage Port & Adapter**
-  - Scaffold abstract `GraphStorePort` in `infrastructure/ports/` and high-throughput Cypher adapter in `infrastructure/adapters/` using connection pooling to ingest and traverse graph nodes and edges.
+- [ ] **Task 04: Hierarchical Summarization Trees (RAPTOR Core)**
+  - Implement recursive clustering trees summarizing leaf code into class summaries, and classes into module architecture summaries.
+  - Route high-level queries to root summaries and specific implementation queries to leaf code.
 
-- [ ] **Task 05: AST-to-Graph Invariant Gate**
-  - Add continuous invariant validation queries (`FLOW_CHECK_GRAPH_DANGLING_NODES`, `FLOW_CHECK_CIRCULAR_DEPENDENCIES`) to reject broken entity references during ingestion following the 3-gate integrity model.
+- [ ] **Task 05: Cross-Encoder Neural Reranking with Calibrated Cutoffs**
+  - Connect `BAAI/bge-reranker-large` or Cohere Rerank v3 in `src/features/rerank/`.
+  - Enforce strict confidence threshold gates to drop low-scoring noise before context reaches the generation stage.
 
----
+- [ ] **Task 06: Self-Correction & Pre-Generation Context Verification**
+  - Build a verification rule in `src/features/output_guard/` checking if the retrieved context explicitly satisfies all named query entities.
+  - Trigger automatic query expansion hops if required entity evidence is absent.
 
-## Phase II: Multi-Model & Plug-and-Play Inference Infrastructure
+- [ ] **Task 07: Dense + Sparse + Graph Hybrid Fusion (Weighted RRF)**
+  - Implement Reciprocal Rank Fusion (RRF) combining dense semantic embeddings (BGE-M3), lexical sparse vectors (SPLADE/BM25), and graph topological distance.
+  - Prevent lexical-only or dense-only bias from degrading precision.
 
-- [ ] **Task 06: Universal Provider-Agnostic LLM Engine Adapter**
-  - Replace mock adapters with an abstract `LlmInferencePort` and unified client supporting OpenAI, Anthropic Claude, Google Gemini, Ollama, and local vLLM instances without touching domain orchestrators.
+- [ ] **Task 08: Automated Citation Grounding & Hallucination Gate**
+  - Enforce strict quotation and citation verification in `src/features/output_guard/`.
+  - Automatically strip or flag ungrounded statements before returning the final response envelope.
 
-- [ ] **Task 07: Dynamic Model Routing Rules**
-  - Create rule tables in `domain/rules/model_routing_rules.py` inspecting token budget, task type, and query complexity to route cheap/fast models (Qwen-2.5-Coder / Claude 3.5 Haiku) for query expansion and heavy models (Claude 3.5 Sonnet / GPT-4o) for code synthesis.
+- [ ] **Task 09: Query Intent Decomposition & Disambiguation**
+  - Parse multi-part questions into atomic sub-queries with independent retrieval pipelines, synthesizing context across topics.
 
-- [ ] **Task 08: Real Neural Embedding Gateway (TEI & Cloud)**
-  - Scaffold a resilient embedding adapter connecting to Text Embeddings Inference (TEI) running `BAAI/bge-m3` locally, with automatic fallback to OpenAI `text-embedding-3-large` or Voyage-Code embeddings.
+- [ ] **Task 10: Dynamic Index-Level Filtering via ACL & Version Tags**
+  - Apply multi-tenant partition filters and version boundary conditions directly inside Qdrant and Neo4j queries to prevent stale data contamination.
 
-- [ ] **Task 09: Cross-Encoder Neural Reranking Adapter**
-  - Implement a hardware-accelerated reranking adapter using `BAAI/bge-reranker-large` or Cohere Rerank v3 with strict latency budgeting (<150ms).
+- [ ] **Task 11: Negative Constraint & Anti-Pattern Indexing**
+  - Index architectural constraints, deprecated APIs, and forbidden patterns as distinct negative-constraint graph nodes.
 
-- [ ] **Task 10: LLM Structured Output Enforcement**
-  - Enforce strict JSON Schema generation on all LLM responses to prevent free-text drift and ensure predictable parsing across all consumer IDEs.
+- [ ] **Task 12: Context Redundancy Pruning & Compression**
+  - Apply token-level deduping across retrieved chunks to maximize effective prompt context density and eliminate duplicate sentences.
 
----
-
-## Phase III: Hybrid Graph + Vector Multi-Hop Retrieval
-
-- [ ] **Task 11: Sub-Graph Neighborhood Query Workflow**
-  - Build a graph retrieval workflow that takes a seed symbol (e.g., `DataIntegrityService`) and performs 2-hop topological traversal (`node -> calls -> dependency -> enforces -> table`) to collect surrounding context that vectors miss.
-
-- [ ] **Task 12: Reciprocal Rank Fusion (RRF) Domain Combiner**
-  - Implement a pure mathematical fusion rule (`score = 1 / (60 + rank_dense) + 1 / (60 + rank_sparse) + 1 / (60 + rank_graph)`) uniting vector hits, lexical BM25 hits, and graph topological hits.
-
-- [ ] **Task 13: Hierarchical Document & Code Summarization Trees (RAPTOR-Style)**
-  - Create a clustering service that summarizes child functions into class summaries, and classes into module summaries, generating a multi-resolution knowledge graph for high-level architectural queries.
-
-- [ ] **Task 14: Cross-Tenant Vector-Graph Partitioning**
-  - Implement hard isolation where Qdrant payloads and Neo4j labels include `tenant_id` to guarantee zero cross-tenant memory leaks under selective ACL filters.
-
-- [ ] **Task 15: Query Intent Decomposition Engine**
-  - Add query decomposition workflow splitting ambiguous developer queries into parallel graph sub-queries: vector search for natural language policies + Cypher path queries for database tables.
+- [ ] **Task 13: Automated Golden Benchmark Evaluation Harness**
+  - Build an automated evaluation suite running 100 golden queries measuring Hit@K, MRR, and NDCG to prevent quality regression during iterations.
 
 ---
 
-## Phase IV: Universal IDE Protocols & Standardized Interfaces
+## Pillar II: System Scalability, Concurrency & Throughput
 
-- [ ] **Task 16: Production Model Context Protocol (MCP) Server**
-  - Scaffold an official JSON-RPC MCP server (`src/api/mcp/` and `scripts/ide_mcp_server.py`) exposing standard IDE tools: `code_search`, `graph_inspect`, `policy_check`, and `trace_dependencies`.
+- [ ] **Task 14: Distributed Qdrant HNSW Sharding & Multi-Tenancy**
+  - Tune collection partitions, tenant-scoped indexing, and HNSW parameters (`m`, `ef_construct`, `ef_search`) for sub-15ms search across 10M+ vectors.
 
-- [ ] **Task 17: Language Server Protocol (LSP) Bridge**
-  - Implement an LSP daemon extension allowing IDEs to query the RAG pipeline via standard hover, definition lookup, and code lens notifications without proprietary extensions.
+- [ ] **Task 15: Asynchronous Ingestion via Kafka & Worker Pool**
+  - Offload heavy document parsing, vector embedding, and graph indexing to Kafka consumer workers with backpressure management.
 
-- [ ] **Task 18: Cursor & Windsurf Rule Files Auto-Generator**
-  - Build a dynamic export service compiling your high-priority database rules and hexagonal contracts into optimized `.cursorrules` and `.windsurfrules` files.
+- [ ] **Task 16: Multi-Tier Distributed Cache (Valkey / Redis L1/L2)**
+  - Implement caching in `src/infra/cache/` for query embeddings, reranking scores, and final responses with automatic invalidation on updates.
 
-- [ ] **Task 19: Context Truncation & Token Budget Guard**
-  - Implement a token budget allocator in `service/` that dynamically slices retrieved graph paths and code snippets to fit within caller IDE limits (4k, 8k, 32k window budgets) with zero dropped syntax tokens.
+- [ ] **Task 17: Dynamic Batched Embedding Generation**
+  - Batch individual chunk embedding requests into dynamic micro-batches (e.g. 32 chunks / 20ms) via Text Embeddings Inference (TEI) to saturate GPU tensors.
 
-- [ ] **Task 20: Streaming SSE / WebSocket Delivery Gateway**
-  - Add `/api/v1/pipeline/stream` supporting Server-Sent Events (SSE) so IDE completions stream tokens with sub-50ms Time-To-First-Token (TTFT) while asynchronously logging telemetry.
+- [ ] **Task 18: Non-Blocking Database Adapter (`asyncpg`)**
+  - Replace in-memory storage adapters with an `asyncpg` pooled connection manager executing parameterized `FLOW_*` SQL queries with strict timeouts.
 
----
+- [ ] **Task 19: Zero-Copy Stream Processing for Ingestion**
+  - Process multi-megabyte files through chunked streaming iterators to prevent memory spikes on large codebases and documents.
 
-## Phase V: Enterprise Data Integrity, Verification & Continuous Learning
+- [ ] **Task 20: Graph Traversal Depth & Timeout Circuit Breaker**
+  - Guard Cypher graph traversals with maximum depth limits (max 2–3 hops) and timeouts to prevent combinatorial explosions under circular dependencies.
 
-- [ ] **Task 21: Persistent PostgreSQL Storage Adapter for Data Integrity**
-  - Replace `MemoryDataIntegrityRepositoryAdapter` with an `asyncpg` adapter executing real transactions and mapping native SQL errors (`SQLSTATE 23xxx`) to `CONSTRAINT_REGISTRY`.
+- [ ] **Task 21: Zero-Downtime Blue/Green Vector & Graph Aliasing**
+  - Implement atomic collection aliasing in Qdrant and Neo4j so index rebuilding occurs in shadow mode without interrupting live reads.
 
-- [ ] **Task 22: Automated Continuous Graph Invariant Worker**
-  - Create a background daemon executing `FLOW_CHECK_*` integrity checks on a scheduled cron to report orphan symbols, broken foreign references, and ungrounded nodes.
+- [ ] **Task 22: Leaky-Bucket Rate Limiting & Token Concurrency Throttling**
+  - Add tenant-level rate limiting to protect LLM endpoints and embedding services from noisy neighbors.
 
-- [ ] **Task 23: Automated Feedback & Telemetry Loop in Langfuse**
-  - Ingest IDE user actions (accept/reject completion) via an audit endpoint and correlate with original Langfuse trace IDs to compute real-world retrieval precision.
+- [ ] **Task 23: Distributed W3C Trace Context & Metric Export**
+  - Propagate W3C `traceparent` across Kafka events, HTTP requests, and background tasks, reporting p95/p99 latency per stage to Prometheus and Langfuse.
 
-- [ ] **Task 24: Incremental Codebase Git Change Feed Worker**
-  - Connect `change_feed` to Git webhooks or local file watchers to incrementally re-index only changed files and updated AST edges rather than re-indexing the whole repository.
+- [ ] **Task 24: Incremental CDC (Change Data Capture) Re-Indexing**
+  - Ingest database WAL streams or Git diffs via `src/features/change_feed/` to re-index only dirty entities and updated relationships.
 
-- [ ] **Task 25: Automated Negative & Golden Evaluation Dataset**
-  - Build an offline benchmark suite with 50 golden codebase questions asserting that the hybrid graph-vector pipeline consistently beats pure lexical and pure vector retrieval in precision, recall, and grounding score.
+- [ ] **Task 25: Horizontal Worker Auto-Scaling Hooks**
+  - Expose Kubernetes health and queue-depth probes (`/readyz`, `/metrics`) to trigger horizontal pod autoscaling under ingestion load spikes.
