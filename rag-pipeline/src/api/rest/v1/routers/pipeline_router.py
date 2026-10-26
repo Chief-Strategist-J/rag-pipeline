@@ -13,6 +13,8 @@ from src.features.embed_enrich.contracts.embed_enrich_types import (
 from src.api.rest.v1.handlers.pipeline_handler import create_pipeline_query_response
 from src.shared.types.envelope import ApiResponse, ResponseError, ResponseMeta
 from src.shared.utils.time_utils import utc_now_iso, generate_request_id
+from src.shared.constants.system import HttpHeader
+from src.infra.config.settings import settings
 
 router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 
@@ -34,7 +36,7 @@ class DocumentIngestDTO(BaseModel):
     version: int = Field(default=1)
     sectionTitle: str = Field(default="General")
     content: str = Field(min_length=1)
-    aclTags: List[str] = Field(default_factory=lambda: ["INTERNAL", "PUBLIC"])
+    aclTags: List[str] = Field(default_factory=lambda: list(settings.DEFAULT_ALLOWED_ACLS))
 
 
 def _init_default_orchestrator() -> EndToEndPipelineOrchestrator:
@@ -47,7 +49,7 @@ def _init_default_orchestrator() -> EndToEndPipelineOrchestrator:
         content="According to the corporate policy, all travel expenses must be submitted within 30 days.",
         denseVector=[0.1] * 128,
         sparseVector=SparseVectorDTO(indices=[1, 2], values=[1.0, 1.0]),
-        aclTags=["INTERNAL", "PUBLIC"],
+        aclTags=list(settings.DEFAULT_ALLOWED_ACLS),
         metadata={},
         createdAt="2026-10-23T12:00:00Z"
     )
@@ -64,7 +66,7 @@ _orchestrator = _init_default_orchestrator()
 )
 async def ingest_document(request: Request, payload: Dict[str, Any]) -> JSONResponse:
     start_time = time.perf_counter()
-    req_id = request.headers.get("x-request-id") or generate_request_id()
+    req_id = request.headers.get(HttpHeader.X_REQUEST_ID.value) or generate_request_id()
 
     try:
         dto = DocumentIngestDTO.model_validate(payload)
@@ -124,8 +126,8 @@ async def ingest_document(request: Request, payload: Dict[str, Any]) -> JSONResp
 )
 async def query_pipeline(request: Request, payload: Dict[str, Any]) -> JSONResponse:
     start_time = time.perf_counter()
-    req_id = request.headers.get("x-request-id") or generate_request_id()
-    raw_traceparent = request.headers.get("traceparent")
+    req_id = request.headers.get(HttpHeader.X_REQUEST_ID.value) or generate_request_id()
+    raw_traceparent = request.headers.get(HttpHeader.TRACEPARENT.value)
     if raw_traceparent and "-" in raw_traceparent:
         parts = raw_traceparent.split("-")
         trace_id = parts[1] if len(parts) > 1 else generate_request_id()

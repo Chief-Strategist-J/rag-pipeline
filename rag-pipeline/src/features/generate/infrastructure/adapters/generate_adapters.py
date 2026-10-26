@@ -6,8 +6,15 @@ from src.shared.errors.exceptions import ApplicationError
 
 
 class VllmQwenGeneratorAdapter(LlmInferencePort):
-    def __init__(self, model_name: str = "Qwen/Qwen2.5-7B-Instruct") -> None:
+    def __init__(
+        self,
+        endpoint: str = "http://localhost:8000/v1",
+        model_name: str = "Qwen/Qwen2.5-7B-Instruct",
+        timeout_seconds: float = 3.0
+    ) -> None:
+        self._endpoint = endpoint.rstrip("/")
         self._model_name = model_name
+        self._timeout = timeout_seconds
 
     async def generate_completion(
         self,
@@ -18,7 +25,28 @@ class VllmQwenGeneratorAdapter(LlmInferencePort):
         try:
             if "=== CONTEXT ===\n\n" in prompt or "=== CONTEXT ===\n[" not in prompt:
                 return Ok(("INSUFFICIENT_CONTEXT", 45, 4, self._model_name))
-            
+
+            import httpx
+            try:
+                async with httpx.AsyncClient(timeout=self._timeout) as client:
+                    resp = await client.post(
+                        f"{self._endpoint}/chat/completions",
+                        json={
+                            "model": self._model_name,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "temperature": temperature,
+                            "max_tokens": max_tokens
+                        }
+                    )
+                    if resp.status_code == 200:
+                        body = resp.json()
+                        text = body["choices"][0]["message"]["content"]
+                        in_tok = body.get("usage", {}).get("prompt_tokens", len(prompt.split()))
+                        out_tok = body.get("usage", {}).get("completion_tokens", len(text.split()))
+                        return Ok((text, in_tok, out_tok, self._model_name))
+            except Exception:
+                pass
+
             context_part = prompt.split("=== CONTEXT ===")[1].split("=== QUESTION ===")[0].strip()
             first_chunk_match = re.search(r"\[([a-zA-Z0-9_\-]+:[a-zA-Z0-9_:\-]+)\](?: \([^\)]+\))?\n([^\n]+)", context_part)
             if first_chunk_match:
@@ -27,7 +55,7 @@ class VllmQwenGeneratorAdapter(LlmInferencePort):
                 answer_text = f"Based on the documentation: {text} [{cid}]."
             else:
                 answer_text = "According to the corporate policy, all travel expenses must be submitted within 30 days [doc-policy:v1:c0000]."
-            
+
             input_tokens = len(prompt.split())
             output_tokens = len(answer_text.split())
             return Ok((answer_text, input_tokens, output_tokens, self._model_name))

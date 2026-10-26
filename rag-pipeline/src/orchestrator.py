@@ -16,7 +16,10 @@ from src.features.embed_enrich.infrastructure.adapters.embed_enrich_adapters imp
 
 from src.features.retrieve.service.retrieve_service import RetrieveService, RetrieveServiceDeps
 from src.features.retrieve.contracts.retrieve_types import RetrieveRequestDTO
-from src.features.retrieve.infrastructure.adapters.retrieve_adapters import MemoryHybridVectorSearchAdapter
+from src.features.retrieve.infrastructure.adapters.retrieve_adapters import (
+    MemoryHybridVectorSearchAdapter,
+    QdrantHybridVectorSearchAdapter,
+)
 
 from src.features.rerank.service.rerank_service import RerankService, RerankServiceDeps
 from src.features.rerank.contracts.rerank_types import RerankRequestDTO
@@ -69,7 +72,13 @@ class EndToEndPipelineOrchestrator:
                 "sparse_port": LexicalSparseEncodingAdapter()
             })()
         )
-        self.vector_search_adapter = MemoryHybridVectorSearchAdapter(seeded_points)
+        mem_adapter = MemoryHybridVectorSearchAdapter(seeded_points)
+        self.vector_search_adapter = QdrantHybridVectorSearchAdapter(
+            host=settings.QDRANT_HOST,
+            port=settings.QDRANT_PORT,
+            collection_name=settings.QDRANT_COLLECTION_NAME,
+            fallback_adapter=mem_adapter
+        )
         self.retrieve_service = RetrieveService(
             type("RetrieveDeps", (), {
                 "search_port": self.vector_search_adapter
@@ -82,7 +91,10 @@ class EndToEndPipelineOrchestrator:
         )
         self.generate_service = GenerateService(
             type("GenDeps", (), {
-                "llm_port": VllmQwenGeneratorAdapter()
+                "llm_port": VllmQwenGeneratorAdapter(
+                    endpoint=settings.VLLM_ENDPOINT,
+                    model_name=settings.GENERATION_MODEL
+                )
             })()
         )
         self.guard_service = OutputGuardService(
