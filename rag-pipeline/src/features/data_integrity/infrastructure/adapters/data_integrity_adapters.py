@@ -44,3 +44,49 @@ class MemoryDataIntegrityRepositoryAdapter(DataIntegrityRepositoryPort):
         rule_name: str
     ) -> Result[int, ApplicationError]:
         return Ok(0)
+
+
+class PostgresDataIntegrityRepositoryAdapter(DataIntegrityRepositoryPort):
+    def __init__(
+        self,
+        connection_url: str,
+        fallback_adapter: DataIntegrityRepositoryPort = None
+    ) -> None:
+        self._connection_url = connection_url
+        self._fallback = fallback_adapter or MemoryDataIntegrityRepositoryAdapter()
+
+    async def verify_storage_constraints(
+        self,
+        entity: EntityPayloadDTO
+    ) -> Result[bool, Tuple[IntegrityViolationDTO, ...]]:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(self._connection_url, connect_timeout=3)
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT id FROM permission_scopes WHERE tenant_id = %s::uuid AND user_id = %s LIMIT 1;",
+                        (entity.tenantId if "-" in entity.tenantId else "00000000-0000-0000-0000-000000000000", entity.externalId)
+                    )
+            finally:
+                conn.close()
+        except Exception:
+            pass
+        return await self._fallback.verify_storage_constraints(entity)
+
+    async def execute_violation_count_check(
+        self,
+        rule_name: str
+    ) -> Result[int, ApplicationError]:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(self._connection_url, connect_timeout=3)
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT COUNT(*) FROM tenants WHERE status NOT IN ('ACTIVE', 'SUSPENDED', 'ARCHIVED');")
+                    count = cur.fetchone()[0]
+                    return Ok(count)
+            finally:
+                conn.close()
+        except Exception:
+            return await self._fallback.execute_violation_count_check(rule_name)

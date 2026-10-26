@@ -14,6 +14,7 @@ from src.features.data_integrity.infrastructure.ports.data_integrity_ports impor
 )
 from src.features.data_integrity.infrastructure.adapters.data_integrity_adapters import (
     MemoryDataIntegrityRepositoryAdapter,
+    PostgresDataIntegrityRepositoryAdapter,
     CONSTRAINT_REGISTRY,
 )
 
@@ -27,5 +28,6 @@ __all__ = [
     "GateLevel",
     "DataIntegrityRepositoryPort",
     "MemoryDataIntegrityRepositoryAdapter",
+    "PostgresDataIntegrityRepositoryAdapter",
     "CONSTRAINT_REGISTRY",
 ]

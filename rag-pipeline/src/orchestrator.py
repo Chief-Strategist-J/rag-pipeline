@@ -57,6 +57,7 @@ from src.features.data_integrity.contracts.data_integrity_types import (
 )
 from src.features.data_integrity.infrastructure.adapters.data_integrity_adapters import (
     MemoryDataIntegrityRepositoryAdapter,
+    PostgresDataIntegrityRepositoryAdapter,
 )
 
 from src.shared.types.envelope import Result, Ok, Err
@@ -113,9 +114,14 @@ class EndToEndPipelineOrchestrator:
                 "audit_port": MemoryGuardAuditAdapter()
             })()
         )
+        di_mem = MemoryDataIntegrityRepositoryAdapter()
+        di_repo = PostgresDataIntegrityRepositoryAdapter(
+            connection_url=settings.DATABASE_URL,
+            fallback_adapter=di_mem
+        )
         self.data_integrity_service = DataIntegrityService(
             type("DataIntegrityDeps", (), {
-                "repo_port": MemoryDataIntegrityRepositoryAdapter()
+                "repo_port": di_repo
             })()
         )
         if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:

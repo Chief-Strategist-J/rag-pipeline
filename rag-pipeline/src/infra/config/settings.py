@@ -20,13 +20,13 @@ class AppSettings(BaseSettings):
     API_VERSION: str = Field(default="v1")
     SERVICE_NAME: str = Field(default="rag-pipeline")
 
-    DATABASE_HOST: str = Field(default="postgres")
-    DATABASE_PORT: int = Field(default=5432)
+    DATABASE_HOST: str = Field(default="localhost")
+    DATABASE_PORT: int = Field(default=5433)
     DATABASE_NAME: str = Field(default="rag_pipeline_db")
     DATABASE_USER: str = Field(default="postgres")
-    DATABASE_PASSWORD: str = Field(default="postgres_secure_password")
+    DATABASE_PASSWORD: str = Field(default="password")
     DATABASE_URL: str = Field(
-        default="postgresql://postgres:postgres_secure_password@postgres:5432/rag_pipeline_db"
+        default="postgresql://postgres:password@localhost:5433/rag_pipeline_db"
     )
     DATABASE_POOL_SIZE: int = Field(default=20)
     DATABASE_MAX_OVERFLOW: int = Field(default=10)
