@@ -9,6 +9,9 @@ class DocumentFormat(str, Enum):
     MARKDOWN = "MARKDOWN"
     HTML = "HTML"
     TEXT = "TEXT"
+    PYTHON = "PYTHON"
+    TYPESCRIPT = "TYPESCRIPT"
+    SQL = "SQL"
 
 
 class BlockType(str, Enum):
@@ -17,6 +20,22 @@ class BlockType(str, Enum):
     TABLE = "TABLE"
     CODE = "CODE"
     LIST_ITEM = "LIST_ITEM"
+    FUNCTION = "FUNCTION"
+    CLASS = "CLASS"
+    SQL_STATEMENT = "SQL_STATEMENT"
+
+
+class SemanticChunkDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    chunkId: str
+    documentId: str
+    tenantId: str
+    sectionPath: str
+    nodeType: BlockType
+    content: str
+    startLine: int
+    endLine: int
+    metadata: Dict[str, str] = Field(default_factory=dict)
 
 
 class ParsedBlockDTO(BaseModel):

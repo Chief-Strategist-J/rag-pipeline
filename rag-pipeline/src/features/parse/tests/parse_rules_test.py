@@ -49,3 +49,36 @@ def test_parse_state_transitions():
     t4 = transition_state(t3.value, ParseEvent.COMPLETE)
     assert t4.is_ok is True
     assert t4.value == ParseState.COMPLETED
+
+
+def test_semantic_ast_chunking():
+    doc = """# Data Contract
+
+## 1. Entity Field Contract
+Every column is declared before migration.
+
+| name | type | null |
+| id | uuid | no |
+| amount | numeric | no |
+
+## 2. Identifier Contract
+Mandatory identifiers carry five roles.
+
+```sql
+SELECT id, tenant_id FROM orders;
+```
+"""
+    from src.features.parse.domain.rules.parse_rules import chunk_document_by_semantic_ast
+    chunks = chunk_document_by_semantic_ast(
+        tenant_id="tenant-corp",
+        document_id="doc-rules",
+        raw_content=doc
+    )
+    assert len(chunks) >= 3
+    table_chunk = next(c for c in chunks if c.nodeType == BlockType.TABLE)
+    assert "| id | uuid | no |" in table_chunk.content
+    assert "Data Contract > 1. Entity Field Contract" in table_chunk.sectionPath
+
+    code_chunk = next(c for c in chunks if c.nodeType == BlockType.CODE)
+    assert "SELECT id, tenant_id FROM orders;" in code_chunk.content
+    assert "Data Contract > 2. Identifier Contract" in code_chunk.sectionPath

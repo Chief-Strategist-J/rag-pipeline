@@ -11,6 +11,7 @@ from src.features.embed_enrich.contracts.embed_enrich_types import (
     SparseVectorDTO,
     EmbeddingRequestDTO,
 )
+from src.features.parse import chunk_document_by_semantic_ast, DocumentFormat
 from src.api.rest.v1.handlers.pipeline_handler import create_pipeline_query_response
 from src.shared.types.envelope import ApiResponse, ResponseError, ResponseMeta
 from src.shared.utils.time_utils import utc_now_iso, generate_request_id

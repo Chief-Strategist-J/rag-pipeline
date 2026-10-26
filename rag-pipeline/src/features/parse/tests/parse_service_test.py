@@ -65,3 +65,36 @@ async def test_parse_plain_paragraphs():
     assert res.value.hasTables is False
     assert len(res.value.blocks) == 1
     assert res.value.blocks[0].blockType == BlockType.PARAGRAPH
+
+
+@pytest.mark.asyncio
+async def test_treesitter_ast_parser_integration():
+    from src.features.parse.infrastructure.adapters.parse_adapters import TreeSitterASTDocumentParserAdapter
+    class ASTDeps:
+        def __init__(self):
+            self.parser_port = TreeSitterASTDocumentParserAdapter()
+            self.storage_port = MemoryStorageArtifactAdapter()
+
+    service = ParseService(ASTDeps())
+    raw = """# Engineering Standards
+## Section 1: Ingress Gate
+Invalid data must be rejected immediately at write time.
+
+| Gate | Purpose |
+| Ingress | Normalize and validate |
+
+## Section 2: Storage Gate
+Storage constraints are authoritative.
+"""
+    req = ParseRequestDTO(
+        documentId="doc-eng-1",
+        tenantId="tenant-corp",
+        format=DocumentFormat.MARKDOWN,
+        rawContent=raw,
+        correlationId="corr-ast-1"
+    )
+    res = await service.parse(req)
+    assert res.is_ok is True
+    blocks = res.value.blocks
+    assert len(blocks) >= 2
+    assert any("Ingress Gate" in b.sectionTitle for b in blocks)
