@@ -23,6 +23,7 @@ class RequestTelemetryEnvelopeDTO(BaseModel):
     rerankedChunkCount: int = 0
     promptTokens: int = 0
     generatedTokens: int = 0
+    generatedAnswer: Optional[str] = None
     hasError: bool = False
     timestamp: str
     correlationId: str

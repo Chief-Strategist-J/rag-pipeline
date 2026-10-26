@@ -47,6 +47,7 @@ class LangfuseTelemetryCollectorAdapter(TelemetrySpanCollectorPort):
                     name=f"rag-pipeline-query:{envelope.tenantId}",
                     user_id=envelope.userId,
                     input={"query": envelope.rewrittenQuery},
+                    output={"answer": envelope.generatedAnswer},
                     metadata={
                         "requestId": envelope.requestId,
                         "tenantId": envelope.tenantId,
@@ -71,7 +72,7 @@ class LangfuseTelemetryCollectorAdapter(TelemetrySpanCollectorPort):
                     name="generation-stage",
                     model="Qwen/Qwen2.5-7B-Instruct",
                     input={"promptTokens": envelope.promptTokens, "query": envelope.rewrittenQuery},
-                    output={"generatedTokens": envelope.generatedTokens},
+                    output={"answer": envelope.generatedAnswer, "generatedTokens": envelope.generatedTokens},
                     usage={
                         "input": envelope.promptTokens,
                         "output": envelope.generatedTokens,

@@ -252,6 +252,7 @@ class EndToEndPipelineOrchestrator:
                 rerankedChunkCount=len(top_chunks),
                 promptTokens=gen_out.inputTokens,
                 generatedTokens=gen_out.outputTokens,
+                generatedAnswer=guard_out.sanitizedAnswer,
                 hasError=False,
                 timestamp=utc_now_iso(),
                 correlationId=request_id
