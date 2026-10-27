@@ -9,10 +9,6 @@ spec:
         elements:
           - env: dev
             namespace: rag-dev
-          - env: staging
-            namespace: rag-staging
-          - env: prod
-            namespace: rag-prod
   template:
     metadata:
       name: "rag-pipeline-{{env}}"

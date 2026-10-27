@@ -1,0 +1,218 @@
+name: CI & Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Environment to deploy/sync'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  DOCKER_IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME || 'chiefstrategistj' }}/rag-pipeline
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # -------------------------------------------------------------
+  # Phase 1: Quality Gate & Validation
+  # -------------------------------------------------------------
+  validate:
+    name: Code Quality & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Linting & Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy pytest pytest-asyncio
+          pip install -e ./rag-pipeline
+
+      - name: Run Ruff Linter & Formatter Check
+        run: |
+          ruff check rag-pipeline/src rag-pipeline/tests
+          ruff format --check rag-pipeline/src rag-pipeline/tests
+
+      - name: Run MyPy Type Check
+        run: |
+          mypy rag-pipeline/src
+
+      - name: Run Unit Tests
+        run: |
+          pytest rag-pipeline/tests/unit -v --maxfail=1
+
+  # -------------------------------------------------------------
+  # Phase 2: Kubernetes Manifest & Kustomize Validation
+  # -------------------------------------------------------------
+  validate-k8s:
+    name: Validate Kubernetes & Kustomize Overlays
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Test Build Overlays (Dev, Staging, Prod)
+        run: |
+          echo "Validating Dev overlay..."
+          kustomize build rag-pipeline/deploy/k8s/overlays/dev > /dev/null
+          echo "Validating Staging overlay..."
+          kustomize build rag-pipeline/deploy/k8s/overlays/staging > /dev/null
+          echo "Validating Prod overlay..."
+          kustomize build rag-pipeline/deploy/k8s/overlays/prod > /dev/null
+          echo "Kustomize overlays build successfully."
+
+  # -------------------------------------------------------------
+  # Phase 3: Docker Container Build & Push to Docker Hub
+  # -------------------------------------------------------------
+  build-and-push:
+    name: Build & Push Container Image
+    needs: [validate, validate-k8s]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=short,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./rag-pipeline
+          file: ./rag-pipeline/deploy/docker/service/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # -------------------------------------------------------------
+  # Phase 4: GitOps Kustomize Overlay Image Promotion
+  # -------------------------------------------------------------
+  promote-gitops:
+    name: Promote & Update K8s Image Tag
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Set Image Tag in Target Overlay
+        id: set-target
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          NEW_TAG="sha-${SHORT_SHA}"
+
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TARGET_ENV="prod"
+            NEW_TAG="${{ github.ref_name }}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TARGET_ENV="${{ github.event.inputs.target_env }}"
+          else
+            TARGET_ENV="staging"
+          fi
+
+          echo "Target Environment: ${TARGET_ENV}"
+          echo "New Image: ${{ env.DOCKER_IMAGE_NAME }}:${NEW_TAG}"
+
+          cd "rag-pipeline/deploy/k8s/overlays/${TARGET_ENV}"
+          kustomize edit set image rag-pipeline="${{ env.DOCKER_IMAGE_NAME }}:${NEW_TAG}"
+
+          echo "target_env=${TARGET_ENV}" >> $GITHUB_OUTPUT
+          echo "tag=${NEW_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Commit & Push GitOps Manifest Updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add rag-pipeline/deploy/k8s/overlays/
+          if git diff --staged --quiet; then
+            echo "No changes in Kubernetes overlay manifests to commit."
+          else
+            git commit -m "chore(deploy): promote rag-pipeline:${{ steps.set-target.outputs.tag }} to ${{ steps.set-target.outputs.target_env }} [skip ci]"
+            git push origin ${{ github.ref_name }}
+          fi
+
+  # -------------------------------------------------------------
+  # Phase 5: Trigger ArgoCD Sync (GitOps Reconciliation)
+  # -------------------------------------------------------------
+  argocd-sync:
+    name: Sync ArgoCD Application
+    needs: promote-gitops
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Trigger ArgoCD Application Sync
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+        run: |
+          if [ -z "${ARGOCD_SERVER}" ] || [ -z "${ARGOCD_AUTH_TOKEN}" ]; then
+            echo "ARGOCD_SERVER or ARGOCD_AUTH_TOKEN secret not configured."
+            echo "ArgoCD automated polling will auto-sync manifests per syncPolicy in applicationset.yaml."
+            exit 0
+          fi
+
+          APP_NAME="rag-pipeline-staging"
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            APP_NAME="rag-pipeline-prod"
+          fi
+
+          echo "Syncing ArgoCD application: ${APP_NAME} at ${ARGOCD_SERVER}..."
+          curl -k -s -X POST -H "Authorization: Bearer ${ARGOCD_AUTH_TOKEN}" \
+            "https://${ARGOCD_SERVER}/api/v1/applications/${APP_NAME}/sync" || true

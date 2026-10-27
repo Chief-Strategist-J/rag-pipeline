@@ -3,7 +3,7 @@ kind: Kustomization
 
 namespace: rag-staging
 
-bases:
+resources:
   - ../../base
 
 patches:

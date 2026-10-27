@@ -5,7 +5,9 @@ resources:
   - deployment.yaml
   - service.yaml
   - configmap.yaml
-  - scaledobject.yaml
   - ingress.yaml
   - pdb.yaml
   - hpa.yaml
+  - kafka.yaml
+  - qdrant.yaml
+  - valkey.yaml

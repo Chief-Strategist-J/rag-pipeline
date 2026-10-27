@@ -3,7 +3,7 @@ kind: Kustomization
 
 namespace: rag-dev
 
-bases:
+resources:
   - ../../base
 
 patches:
