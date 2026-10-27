@@ -22,3 +22,6 @@ data:
   KAFKA_TOPIC_INGESTION: "rag.ingestion.v1"
   KAFKA_TOPIC_DLQ: "rag.dlq.v1"
   KAFKA_CONSUMER_GROUP: "rag-pipeline-workers"
+  LANGFUSE_PUBLIC_KEY: "pk-lf-490382f9-5f22-489d-97b3-cd93817421d7"
+  LANGFUSE_SECRET_KEY: "sk-lf-e389433a-e081-4f1d-8f45-589a9078d472"
+  LANGFUSE_HOST: "http://langfuse-web:3000"
