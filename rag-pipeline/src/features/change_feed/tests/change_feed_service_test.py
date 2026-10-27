@@ -3,7 +3,7 @@ from src.features.change_feed.service.change_feed_service import (
     ChangeFeedService,
     ChangeFeedServiceDeps,
 )
-from src.features.change_feed.infrastructure.adapters.change_feed_adapters import (
+from src.features.change_feed.infrastructure.adapters.change_feed_memory_adapter import (
     MemoryChangeFeedRepositoryAdapter,
     MemoryDownstreamInvalidationAdapter,
 )
@@ -115,7 +115,7 @@ async def test_stale_version_event_rejection():
 
 @pytest.mark.asyncio
 async def test_kafka_producer_invalidation_adapter():
-    from src.features.change_feed.infrastructure.adapters.change_feed_adapters import (
+    from src.features.change_feed.infrastructure.adapters.change_feed_kafka_adapter import (
         KafkaDownstreamInvalidationAdapter,
     )
     fallback = MemoryDownstreamInvalidationAdapter()

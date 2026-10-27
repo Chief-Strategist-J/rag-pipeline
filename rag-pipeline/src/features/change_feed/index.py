@@ -11,11 +11,14 @@ from src.features.change_feed.infrastructure.ports.change_feed_ports import (
     ChangeFeedRepositoryPort,
     DownstreamInvalidationPort,
 )
-from src.features.change_feed.infrastructure.adapters.change_feed_adapters import (
+from src.features.change_feed.infrastructure.adapters.change_feed_memory_adapter import (
     MemoryChangeFeedRepositoryAdapter,
     MemoryDownstreamInvalidationAdapter,
+)
+from src.features.change_feed.infrastructure.adapters.change_feed_kafka_adapter import (
     KafkaDownstreamInvalidationAdapter,
 )
+
 
 
 __all__ = [

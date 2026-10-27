@@ -18,7 +18,7 @@ from src.shared.utils.time_utils import utc_now_iso, generate_request_id
 from src.shared.constants.system import HttpHeader
 from src.infra.config.settings import settings
 
-from src.features.change_feed.infrastructure.adapters.change_feed_adapters import (
+from src.features.change_feed.infrastructure.adapters.change_feed_kafka_adapter import (
     KafkaDownstreamInvalidationAdapter,
 )
 from src.features.change_feed.contracts.change_feed_types import (
