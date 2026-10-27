@@ -66,7 +66,7 @@ ensure_argocd() {
   kubectl rollout status deployment/argocd-server -n argocd --timeout=300s
 }
 
-# Edge Case 3: Register ArgoCD Project and Applications
+# Edge Case 3: Register ArgoCD Project, ApplicationSet, and sync
 register_argocd_apps() {
   echo "--- Registering ArgoCD Project and ApplicationSet ---"
   if [ -f "${DEPLOY_DIR}/argocd/project.yaml" ]; then
@@ -76,6 +76,12 @@ register_argocd_apps() {
   if [ -f "${DEPLOY_DIR}/argocd/applicationset.yaml" ]; then
     kubectl apply -f "${DEPLOY_DIR}/argocd/applicationset.yaml"
   fi
+
+  echo "Triggering hard refresh on active applications..."
+  for app in $(kubectl get applications -n argocd -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true); do
+    kubectl -n argocd patch application "${app}" --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' 2>/dev/null || true
+    kubectl -n argocd patch application "${app}" --type merge -p '{"operation":{"sync":{"prune":true,"syncStrategy":{"apply":{"force":true}}}}}' 2>/dev/null || true
+  done
 }
 
 # Edge Case 4: Retrieve admin password and provide port-forwarding URL
