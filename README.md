@@ -320,11 +320,37 @@ curl -X POST http://localhost:8000/api/v1/pipeline/query \
   -H "Content-Type: application/json" \
   -d '{
     "query": "What is our corporate data retention policy?",
-    "tenant_id": "tenant-corp",
-    "user_id": "user-123",
-    "roles": ["employee"]
+    "tenantId": "tenant-corp",
+    "userId": "user-123",
+    "conversationHistory": []
   }'
 ```
+
+---
+
+## 8.1 Live Kubernetes GitOps & Observability Dashboards
+
+The cluster is managed via GitOps using ArgoCD and continuously traced using Langfuse.
+
+### 1. ArgoCD GitOps Deployment Tree
+All microservices and backing servers (Kafka, Qdrant, Valkey, PostgreSQL, Langfuse, and RAG Pipeline) are synchronized automatically across declarative Kubernetes overlays.
+
+![ArgoCD Deployment Tree](docs/assets/argocd-deployment-tree.png)
+
+- **ArgoCD Dashboard**: [http://localhost:8080](http://localhost:8080)
+- **Default Username**: `admin`
+- **Initial Password**: `JzXK1rlJdW-GB2ZA`
+
+---
+
+### 2. Langfuse Observability & Trace Details
+Every query executed through the pipeline records W3C distributed traces, token usage, grounded responses, and stage-by-stage latencies (`authz_rewrite`, `embed`, `retrieve`, `rerank`, `security`, `generate`, `output_guard`, `data_integrity`).
+
+![Langfuse Trace Detail](docs/assets/langfuse-trace-detail.png)
+
+- **Langfuse Dashboard**: [http://localhost:3000](http://localhost:3000)
+- **Active Project**: `llm-obs`
+- **Telemetry Collector**: Direct HTTP Ingestion (`POST /api/public/ingestion`)
 
 ---
 
