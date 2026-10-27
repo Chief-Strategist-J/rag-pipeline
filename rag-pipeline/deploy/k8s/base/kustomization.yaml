@@ -11,3 +11,5 @@ resources:
   - kafka.yaml
   - qdrant.yaml
   - valkey.yaml
+  - langfuse.yaml
+  - postgres.yaml

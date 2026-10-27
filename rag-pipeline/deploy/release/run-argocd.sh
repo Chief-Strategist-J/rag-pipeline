@@ -111,6 +111,20 @@ expose_argocd() {
     sleep 2
     echo "✓ ArgoCD UI live at: http://localhost:${ARGOCD_PORT}"
   fi
+
+  # Check if Langfuse Web is present and expose port 3000
+  LANGFUSE_PORT="${LANGFUSE_PORT:-3000}"
+  if kubectl get svc/langfuse-web -n rag-dev >/dev/null 2>&1; then
+    if ! lsof -i ":${LANGFUSE_PORT}" >/dev/null 2>&1; then
+      echo "Starting Langfuse Web port-forward in background on port ${LANGFUSE_PORT}..."
+      nohup kubectl port-forward svc/langfuse-web -n rag-dev "${LANGFUSE_PORT}:3000" >/dev/null 2>&1 &
+      sleep 2
+    fi
+    echo "========================================================"
+    echo "  Langfuse Observability UI:"
+    echo "  URL:      http://localhost:${LANGFUSE_PORT}"
+    echo "========================================================"
+  fi
 }
 
 main() {
