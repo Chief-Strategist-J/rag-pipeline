@@ -1,8 +1,14 @@
-FROM python:3.11-slim AS builder
+# syntax=docker/dockerfile:1.7
+
+# ------------------------------------------------------------------------------
+# Stage 1: Builder (Compilers and build dependencies live strictly here)
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim@sha256:ae952e0a57138a4317b9b61caaa19a8217c2f356803f8d7e63aad08769950937 AS builder
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=0
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -17,10 +23,14 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY pyproject.toml README.md ./
-RUN pip install --upgrade pip setuptools wheel && \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
     pip install .
 
-FROM python:3.11-slim AS runner
+# ------------------------------------------------------------------------------
+# Stage 2: Runtime (Hardened, minimal attack surface, non-root, tini supervisor)
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim@sha256:ae952e0a57138a4317b9b61caaa19a8217c2f356803f8d7e63aad08769950937 AS runtime
 
 LABEL org.opencontainers.image.title="rag-pipeline-service" \
       org.opencontainers.image.description="Stateless Query and Delivery Pod for RAG Pipeline" \
@@ -31,28 +41,34 @@ LABEL org.opencontainers.image.title="rag-pipeline-service" \
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
-    PORT=8000 \
-    HOST=0.0.0.0
+    LANG=C.UTF-8 \
+    TZ=UTC \
+    HOME=/tmp
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
     ca-certificates \
+    tzdata \
+    tini \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -g 10001 appgroup && \
-    useradd -u 10001 -g appgroup -s /bin/bash -m appuser
+ARG APP_UID=10001
+ARG APP_GID=10001
+
+RUN groupadd --gid ${APP_GID} appgroup && \
+    useradd  --uid ${APP_UID} --gid ${APP_GID} --no-create-home --shell /usr/sbin/nologin appuser && \
+    mkdir -p /app && chown ${APP_UID}:${APP_GID} /app
 
 WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
-COPY --chown=appuser:appgroup config/ /app/config/
-COPY --chown=appuser:appgroup src/ /app/src/
+COPY --chown=${APP_UID}:${APP_GID} config/ /app/config/
+COPY --chown=${APP_UID}:${APP_GID} src/ /app/src/
 
-USER 10001:10001
+USER ${APP_UID}:${APP_GID}
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:8000/healthz || exit 1
+STOPSIGNAL SIGTERM
 
-ENTRYPOINT ["sh", "-c", "exec python3 -m uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000} --timeout-graceful-shutdown 30"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "30"]
