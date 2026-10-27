@@ -335,7 +335,9 @@ The cluster is managed via GitOps using ArgoCD and continuously traced using Lan
 ### 1. ArgoCD GitOps Deployment Tree
 All microservices and backing servers (Kafka, Qdrant, Valkey, PostgreSQL, Langfuse, and RAG Pipeline) are synchronized automatically across declarative Kubernetes overlays.
 
-![ArgoCD Deployment Tree](https://raw.githubusercontent.com/Chief-Strategist-J/rag-pipeline/main/docs/assets/argocd-deployment-tree.png)
+<p align="center">
+  <img src="docs/assets/argocd-deployment-tree.png" alt="ArgoCD GitOps Deployment Tree" width="100%" />
+</p>
 
 - **ArgoCD Dashboard**: [http://localhost:8080](http://localhost:8080)
 - **Default Username**: `admin`
@@ -346,7 +348,9 @@ All microservices and backing servers (Kafka, Qdrant, Valkey, PostgreSQL, Langfu
 ### 2. Langfuse Observability & Trace Details
 Every query executed through the pipeline records W3C distributed traces, token usage, grounded responses, and stage-by-stage latencies (`authz_rewrite`, `embed`, `retrieve`, `rerank`, `security`, `generate`, `output_guard`, `data_integrity`).
 
-![Langfuse Trace Detail](https://raw.githubusercontent.com/Chief-Strategist-J/rag-pipeline/main/docs/assets/langfuse-trace-detail.png)
+<p align="center">
+  <img src="docs/assets/langfuse-trace-detail.png" alt="Langfuse Observability & Trace Details" width="100%" />
+</p>
 
 - **Langfuse Dashboard**: [http://localhost:3000](http://localhost:3000)
 - **Active Project**: `llm-obs`
