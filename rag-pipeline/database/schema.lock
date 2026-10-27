@@ -1,9 +1,15 @@
 version: 1
-last_applied: 0001
+last_applied: 0002
 migrations:
   - id: 0001
     file: database/migrations/sql/0001_initial_schema.sql
     checksum: 778486ab7ddda292a00f9e8e2653a3b1a573f4cf1c91bb34685d8dae19ead62f
     rollback_file: database/migrations/sql/0001_initial_schema.rollback.sql
     rollback_checksum: d2b91c75b6e748a68c23f959f7faf74bd253d92bbb5806f07cca22a5bfce1487
+    status: committed
+  - id: 0002
+    file: database/migrations/sql/0002_kafka_offsets_tracking.sql
+    checksum: aae111eadbe90674d8fdfdfa41c716e9f3ae0173683262a22e482af63a8b898b
+    rollback_file: database/migrations/sql/0002_kafka_offsets_tracking.rollback.sql
+    rollback_checksum: 99434c10979ec49e0540c8337c4cb2d5b49e94994217c88bc418741016a05a77
     status: committed

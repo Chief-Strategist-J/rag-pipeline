@@ -38,6 +38,7 @@ class AppSettings(BaseSettings):
     LANGFUSE_SECRET_KEY: Optional[str] = Field(default=None)
     LANGFUSE_HOST: str = Field(default="http://localhost:3000")
 
+    KAFKA_ENABLED: bool = Field(default=True)
     KAFKA_BOOTSTRAP_SERVERS: str = Field(default="localhost:9092")
     KAFKA_TOPIC_CHANGE_FEED: str = Field(default="rag.cdc.change-feed.v1")
     KAFKA_TOPIC_INGESTION: str = Field(default="rag.ingestion.v1")

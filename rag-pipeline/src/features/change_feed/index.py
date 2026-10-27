@@ -14,7 +14,9 @@ from src.features.change_feed.infrastructure.ports.change_feed_ports import (
 from src.features.change_feed.infrastructure.adapters.change_feed_adapters import (
     MemoryChangeFeedRepositoryAdapter,
     MemoryDownstreamInvalidationAdapter,
+    KafkaDownstreamInvalidationAdapter,
 )
+
 
 __all__ = [
     "ChangeFeedService",
@@ -26,4 +28,5 @@ __all__ = [
     "DownstreamInvalidationPort",
     "MemoryChangeFeedRepositoryAdapter",
     "MemoryDownstreamInvalidationAdapter",
+    "KafkaDownstreamInvalidationAdapter",
 ]

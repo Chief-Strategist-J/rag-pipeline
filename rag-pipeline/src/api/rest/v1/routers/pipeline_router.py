@@ -18,6 +18,14 @@ from src.shared.utils.time_utils import utc_now_iso, generate_request_id
 from src.shared.constants.system import HttpHeader
 from src.infra.config.settings import settings
 
+from src.features.change_feed.infrastructure.adapters.change_feed_adapters import (
+    KafkaDownstreamInvalidationAdapter,
+)
+from src.features.change_feed.contracts.change_feed_types import (
+    DocumentChangeEventDTO,
+    ChangeOperation,
+)
+
 router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 
 
@@ -59,6 +67,11 @@ def _init_default_orchestrator() -> EndToEndPipelineOrchestrator:
 
 
 _orchestrator = _init_default_orchestrator()
+_kafka_adapter = KafkaDownstreamInvalidationAdapter(
+    bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+    topic_ingestion=settings.KAFKA_TOPIC_INGESTION,
+    enabled=settings.KAFKA_ENABLED
+)
 
 
 @router.post(
@@ -125,6 +138,21 @@ async def ingest_document(request: Request, payload: Dict[str, Any]) -> JSONResp
         )
         _orchestrator.vector_search_adapter.add_point(chunk)
         added_chunks.append(cid)
+
+    await _kafka_adapter.dispatch_ingestion_job(
+        DocumentChangeEventDTO(
+            eventId=req_id,
+            tenantId=dto.tenantId,
+            documentId=dto.documentId,
+            operation=ChangeOperation.INSERT,
+            version=dto.version,
+            source="pipeline-api",
+            content=dto.content[:250],
+            aclTags=dto.aclTags,
+            timestamp=utc_now_iso(),
+            correlationId=req_id
+        )
+    )
 
     elapsed = int((time.perf_counter() - start_time) * 1000)
     return JSONResponse(

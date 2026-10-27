@@ -28,6 +28,23 @@ Core production implementation for the Enterprise RAG Pipeline following hexagon
 - `src/shared/`: Shared models, errors, middleware, and constants.
 - `tests/`: Comprehensive test suite across unit, integration, and e2e boundaries.
 
+## Quick Start & Setup
+
+### 1. Start Infrastructure (KRaft Kafka, Qdrant, Valkey, Langfuse)
+```bash
+docker compose -f deploy/docker/compose/docker-compose.infra.yml up -d
+```
+
+### 2. Run Database Migrations
+```bash
+bash scripts/migrate/migrate.sh
+```
+
+### 3. Start the Pipeline Service
+```bash
+bash scripts/run/run.sh
+```
+
 ## Verification
 
 ```bash

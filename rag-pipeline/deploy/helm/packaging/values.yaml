@@ -31,6 +31,10 @@ env:
   VALKEY_HOST: valkey
   VALKEY_PORT: "6379"
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  KAFKA_TOPIC_CHANGE_FEED: rag.cdc.change-feed.v1
+  KAFKA_TOPIC_INGESTION: rag.ingestion.v1
+  KAFKA_TOPIC_DLQ: rag.dlq.v1
+  KAFKA_CONSUMER_GROUP: rag-pipeline-workers
 
 autoscaling:
   enabled: true

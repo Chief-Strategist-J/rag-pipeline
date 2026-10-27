@@ -111,3 +111,39 @@ async def test_stale_version_event_rejection():
     res = await service.process_change_event(stale_evt)
     assert res.is_ok is False
     assert res.error.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_kafka_producer_invalidation_adapter():
+    from src.features.change_feed.infrastructure.adapters.change_feed_adapters import (
+        KafkaDownstreamInvalidationAdapter,
+    )
+    fallback = MemoryDownstreamInvalidationAdapter()
+    kafka_adapter = KafkaDownstreamInvalidationAdapter(
+        bootstrap_servers="localhost:9092",
+        topic_ingestion="rag.ingestion.v1",
+        fallback_adapter=fallback
+    )
+
+    purge_res = await kafka_adapter.purge_document_chunks("tenant-1", "doc-1", "corr-1")
+    assert purge_res.is_ok is True
+    assert purge_res.value == 12
+
+    cache_res = await kafka_adapter.invalidate_answer_cache("tenant-1", "doc-1", "corr-1")
+    assert cache_res.is_ok is True
+
+    evt = DocumentChangeEventDTO(
+        eventId="evt-300",
+        tenantId="tenant-corp",
+        documentId="policy-v3",
+        operation=ChangeOperation.INSERT,
+        version=1,
+        source="pg-cdc",
+        timestamp="2026-10-23T12:00:00Z",
+        correlationId="corr-3"
+    )
+    dispatch_res = await kafka_adapter.dispatch_ingestion_job(evt)
+    assert dispatch_res.is_ok is True
+    assert len(fallback.dispatched_jobs) == 1
+
+    await kafka_adapter.close()

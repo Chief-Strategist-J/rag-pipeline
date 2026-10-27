@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DocumentChangeEvent",
+  "type": "object",
+  "required": [
+    "eventId",
+    "tenantId",
+    "documentId",
+    "operation",
+    "version",
+    "source",
+    "timestamp",
+    "correlationId"
+  ],
+  "properties": {
+    "eventId": { "type": "string" },
+    "tenantId": { "type": "string" },
+    "documentId": { "type": "string" },
+    "operation": { "type": "string", "enum": ["INSERT", "UPDATE", "DELETE", "ACL_UPDATE"] },
+    "version": { "type": "integer", "minimum": 1 },
+    "source": { "type": "string" },
+    "content": { "type": ["string", "null"] },
+    "aclTags": { "type": "array", "items": { "type": "string" } },
+    "metadata": { "type": "object", "additionalProperties": { "type": "string" } },
+    "timestamp": { "type": "string" },
+    "correlationId": { "type": "string" }
+  },
+  "additionalProperties": false
+}

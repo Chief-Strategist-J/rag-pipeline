@@ -15,10 +15,23 @@ topics:
       retention.ms: "604800000"
       min.insync.replicas: "2"
 
+  - name: rag.ingestion.v1
+    partitions: 6
+    replicationFactor: 1
+    configs:
+      cleanup.policy: delete
+      retention.ms: "604800000"
+
+  - name: rag.cdc.change-feed.v1
+    partitions: 6
+    replicationFactor: 1
+    configs:
+      cleanup.policy: delete
+      retention.ms: "604800000"
+
   - name: rag.dlq.v1
     partitions: 3
-    replicationFactor: 3
+    replicationFactor: 1
     configs:
       cleanup.policy: delete
       retention.ms: "2592000000"
-      min.insync.replicas: "2"
