@@ -86,6 +86,10 @@ spec:
             - containerPort: 3000
               name: http
           env:
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3000"
             - name: DATABASE_URL
               value: "postgresql://postgres:password@langfuse-db:5432/langfuse"
             - name: NEXTAUTH_URL
