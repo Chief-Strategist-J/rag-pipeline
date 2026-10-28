@@ -1,3 +1,0 @@
-[submodule "policies"]
-	path = policies
-	url = https://github.com/Scaibu/llm-obs-policies.git
